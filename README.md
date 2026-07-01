@@ -28,7 +28,7 @@ Para mudar a identidade visual sem quebrar a tela inteira:
 
 ## Como rodar no seu computador
 
-1. Abra esta pasta no VS Code, vc ja fez kk
+1. Abra esta pasta no VS Code
 
 2. No VS Code, abra o terminal.
 
