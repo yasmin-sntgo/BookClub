@@ -301,7 +301,7 @@ function SectionHeader({ title, action, compact = false, onAction }) {
 function ActivityCard({ activity, onBookOpen, onListOpen, onReviewOpen }) {
   if (activity.type === "Resenhas") {
     return (
-      <Pressable accessibilityRole="button" onPress={() => onReviewOpen?.(activity.review.id, "reviews")} style={styles.activityCard}>
+      <Pressable accessibilityRole="button" onPress={() => onReviewOpen?.(activity.review.id, "profile")} style={styles.activityCard}>
         <View style={styles.reviewLayout}>
           <Pressable onPress={() => onBookOpen?.(activity.book.id)} style={styles.smallCover}>
             <BookCover book={activity.book} size="small" />

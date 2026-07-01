@@ -50,7 +50,7 @@ export function InteractionsScreen({
       meta: review.user,
       text: review.text,
       showCover: true,
-      onOpen: () => onReviewOpen?.(review.id, "reviews")
+      onOpen: () => onReviewOpen?.(review.id, "interactions")
     })),
     ...likedComments.map((comment) => {
       const review = reviewsById[comment.reviewId];
@@ -63,7 +63,7 @@ export function InteractionsScreen({
         meta: comment.user,
         text: comment.text,
         showCover: false,
-        onOpen: () => review && onReviewOpen?.(review.id, "reviews")
+        onOpen: () => review && onReviewOpen?.(review.id, "interactions")
       };
     })
   ].filter((item) => item.book);
@@ -79,7 +79,7 @@ export function InteractionsScreen({
       meta: review.user,
       text: review.text,
       showCover: true,
-      onOpen: () => onReviewOpen?.(review.id, "reviews")
+      onOpen: () => onReviewOpen?.(review.id, "interactions")
     })),
     ...savedLists.map((list) => ({
       id: `saved-list-${list.id}`,
@@ -152,7 +152,7 @@ export function InteractionsScreen({
                     text={comment.text}
                     showCover={false}
                     onBookOpen={onBookOpen}
-                    onOpen={() => review && onReviewOpen?.(review.id, "reviews")}
+                    onOpen={() => review && onReviewOpen?.(review.id, "interactions")}
                   />
                 );
               })}

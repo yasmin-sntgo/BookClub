@@ -25,7 +25,7 @@ export function NotificationsScreen({
     onNotificationRead?.(notification.id);
 
     if (notification.reviewId) {
-      onReviewOpen?.(notification.reviewId, "reviews");
+      onReviewOpen?.(notification.reviewId, "notifications");
       return;
     }
 
