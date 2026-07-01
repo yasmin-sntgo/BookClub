@@ -6,7 +6,7 @@ import { BottomNav } from "../components/BottomNav";
 import { FeedTabs } from "../components/FeedTabs";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks, mockReviews, mockUsers } from "../data/mockFeed";
+import { mockBooks, mockComments, mockReviews, mockUsers } from "../data/mockFeed";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
@@ -20,6 +20,7 @@ const reviewFilters = [
 export function HomeScreen({
   initialTab = "books",
   followedUserIds = [],
+  comments = mockComments,
   likedReviewIds = [],
   reviews = mockReviews,
   savedReviewIds = [],
@@ -30,6 +31,7 @@ export function HomeScreen({
   onReviewOpen,
   onTabChange,
   onToggleReviewLike,
+  onToggleReviewSave,
   onUserOpen,
   unreadNotificationsCount = 0
 }) {
@@ -68,6 +70,7 @@ export function HomeScreen({
           ) : (
             <ReviewsPanel
               followedUserIds={followedUserIds}
+              comments={comments}
               likedReviewIds={likedReviewIds}
               reviews={reviews}
               booksById={booksById}
@@ -195,6 +198,7 @@ function BookGrid({ title, books, onBookOpen }) {
 
 function ReviewsPanel({
   followedUserIds,
+  comments,
   likedReviewIds,
   reviews,
   booksById,
@@ -248,6 +252,7 @@ function ReviewsPanel({
           book={booksById[review.bookId]}
           liked={likedReviewIds.includes(review.id)}
           saved={savedReviewIds.includes(review.id)}
+          commentCount={countReviewComments(review, comments)}
           onBookOpen={onBookOpen}
           onReviewOpen={onReviewOpen}
           onShareReview={onShareReview}
@@ -266,7 +271,7 @@ function ReviewsPanel({
   );
 }
 
-function ReviewPost({ review, book, liked, saved, onBookOpen, onReviewOpen, onShareReview, onToggleLike, onToggleSave, onUserOpen }) {
+function ReviewPost({ review, book, liked, saved, commentCount, onBookOpen, onReviewOpen, onShareReview, onToggleLike, onToggleSave, onUserOpen }) {
   const userId = findUserId(review.handle);
   const likeCount = review.likes + (liked && !review.liked ? 1 : 0) - (!liked && review.liked ? 1 : 0);
 
@@ -310,7 +315,7 @@ function ReviewPost({ review, book, liked, saved, onBookOpen, onReviewOpen, onSh
           activeColor="#d96060"
           onPress={onToggleLike}
         />
-        <ActionIcon icon="comment" count={review.comments} />
+        <ActionIcon icon="comment" count={commentCount} />
         <ActionIcon
           icon="bookmark"
           count=""
@@ -331,6 +336,10 @@ function ReviewPost({ review, book, liked, saved, onBookOpen, onReviewOpen, onSh
       </View>
     </Pressable>
   );
+}
+
+function countReviewComments(review, comments) {
+  return comments.filter((comment) => comment.reviewId === review.id).length || review.comments;
 }
 
 function findUserId(handle) {

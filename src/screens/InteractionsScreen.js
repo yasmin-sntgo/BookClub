@@ -13,6 +13,7 @@ const tabs = ["Curtidas", "Comentarios", "Salvos"];
 const currentUserHandle = "@yasmin_le";
 
 export function InteractionsScreen({
+  comments = mockComments,
   likedCommentIds = [],
   likedReviewIds = [],
   lists = mockLists,
@@ -40,7 +41,7 @@ export function InteractionsScreen({
     [lists]
   );
   const likedReviews = reviews.filter((review) => likedReviewIds.includes(review.id));
-  const likedComments = mockComments.filter((comment) => likedCommentIds.includes(comment.id));
+  const likedComments = comments.filter((comment) => likedCommentIds.includes(comment.id));
   const likedItems = [
     ...likedReviews.map((review) => ({
       id: `review-${review.id}`,
@@ -67,7 +68,7 @@ export function InteractionsScreen({
       };
     })
   ].filter((item) => item.book);
-  const userComments = mockComments.filter((comment) => comment.handle === currentUserHandle);
+  const userComments = comments.filter((comment) => comment.handle === currentUserHandle);
   const savedReviews = reviews.filter((review) => savedReviewIds.includes(review.id));
   const savedLists = lists.filter((list) => savedListIds.includes(list.id));
   const savedItems = [

@@ -6,7 +6,7 @@ import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks, mockReviews, mockUsers } from "../data/mockFeed";
+import { mockBooks, mockComments, mockReviews, mockUsers } from "../data/mockFeed";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
@@ -34,6 +34,7 @@ function waitForSheetClose() {
 
 export function BookDetailScreen({
   bookId = "dune",
+  comments = mockComments,
   ratings = [],
   reviews = mockReviews,
   shelfEntry,
@@ -46,6 +47,7 @@ export function BookDetailScreen({
   onRateBook,
   onRatingsOpen,
   onReviewOpen,
+  onReviewsOpen,
   onSearchGenre,
   onShelfStatusChange,
   onToggleFavorite,
@@ -153,10 +155,15 @@ export function BookDetailScreen({
             <SectionHeader
               title="Resenhas"
               action={review ? "Todas" : undefined}
-              onAction={review ? () => onReviewOpen?.(review.id, "book") : undefined}
+              onAction={review ? () => onReviewsOpen?.(book.id) : undefined}
             />
             {review ? (
-              <ReviewCard review={review} onReviewOpen={onReviewOpen} onUserOpen={onUserOpen} />
+              <ReviewCard
+                review={review}
+                commentCount={countReviewComments(review, comments)}
+                onReviewOpen={onReviewOpen}
+                onUserOpen={onUserOpen}
+              />
             ) : (
               <View style={styles.emptyReviewCard}>
                 <Text style={styles.emptyReviewTitle}>Ainda nao tem resenhas por aqui</Text>
@@ -329,7 +336,7 @@ function SectionHeader({ title, action, onAction }) {
   );
 }
 
-function ReviewCard({ review, onReviewOpen, onUserOpen }) {
+function ReviewCard({ review, commentCount, onReviewOpen, onUserOpen }) {
   const userId = mockUsers.find((user) => user.handle === review.handle)?.id ?? "lia";
 
   return (
@@ -347,11 +354,15 @@ function ReviewCard({ review, onReviewOpen, onUserOpen }) {
       <Text style={styles.reviewText} numberOfLines={4}>{review.text}</Text>
       <View style={styles.reviewActions}>
         <Text style={styles.reviewAction}>{review.likes} curtidas</Text>
-        <Text style={styles.reviewAction}>{review.comments} respostas</Text>
+        <Text style={styles.reviewAction}>{commentCount} respostas</Text>
         <Text style={styles.readMore}>ler mais</Text>
       </View>
     </Pressable>
   );
+}
+
+function countReviewComments(review, comments) {
+  return comments.filter((comment) => comment.reviewId === review.id).length || review.comments;
 }
 
 function OptionSheet({ visible, title, subtitle, options, onSelect, onClose }) {

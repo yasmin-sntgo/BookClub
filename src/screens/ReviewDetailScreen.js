@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -25,12 +25,14 @@ import { fonts } from "../theme/typography";
 
 export function ReviewDetailScreen({
   reviewId = "review-1",
+  comments: availableComments = mockComments,
   likedCommentIds = [],
   likedReviewIds = [],
   saved = false,
   reviews = mockReviews,
   onBack,
   onBookOpen,
+  onCommentCreate,
   onCreate,
   onNavigate,
   onToggleCommentLike,
@@ -39,18 +41,42 @@ export function ReviewDetailScreen({
   onUserOpen
 }) {
   const [replyingTo, setReplyingTo] = useState(null);
+  const [commentText, setCommentText] = useState("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [commentMenuVisible, setCommentMenuVisible] = useState(false);
   const [notice, setNotice] = useState("");
+  const commentInputRef = useRef(null);
   const review = reviews.find((item) => item.id === reviewId) ?? reviews[0] ?? mockReviews[0];
   const book = mockBooks.find((item) => item.id === review.bookId) ?? mockBooks[0];
   const comments = useMemo(
-    () => mockComments.filter((comment) => comment.reviewId === review.id),
-    [review.id]
+    () => availableComments.filter((comment) => comment.reviewId === review.id),
+    [availableComments, review.id]
   );
   const likedByMe = likedReviewIds.includes(review.id);
   const reviewLikeCount = review.likes + (likedByMe && !review.liked ? 1 : 0) - (!likedByMe && review.liked ? 1 : 0);
+
+  function focusComposer() {
+    setTimeout(() => commentInputRef.current?.focus(), 80);
+  }
+
+  function startReply(userName) {
+    setReplyingTo(userName);
+    focusComposer();
+  }
+
+  function sendComment() {
+    const text = commentText.trim();
+
+    if (!text) {
+      return;
+    }
+
+    onCommentCreate?.({ reviewId: review.id, text, replyingTo });
+    setCommentText("");
+    setReplyingTo(null);
+    setNotice("Comentario publicado.");
+  }
 
   async function shareReview() {
     setNotice("Abrindo compartilhamento...");
@@ -125,7 +151,7 @@ export function ReviewDetailScreen({
                 activeColor="#d96060"
                 onPress={() => onToggleReviewLike?.(review.id)}
               />
-              <ActionIcon icon="comment" count={review.comments} />
+              <ActionIcon icon="comment" count={comments.length} onPress={focusComposer} />
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
@@ -173,7 +199,7 @@ export function ReviewDetailScreen({
                   likes={likes}
                   onLike={() => onToggleCommentLike?.(comment.id)}
                   onMenu={() => setCommentMenuVisible(true)}
-                  onReply={() => setReplyingTo(comment.user)}
+                  onReply={() => startReply(comment.user)}
                   onUserOpen={onUserOpen}
                 />
               );
@@ -182,9 +208,13 @@ export function ReviewDetailScreen({
         </ScrollView>
 
         <CommentComposer
+          inputRef={commentInputRef}
           keyboardVisible={keyboardVisible}
+          text={commentText}
           replyingTo={replyingTo}
           onCancel={() => setReplyingTo(null)}
+          onChangeText={setCommentText}
+          onSend={sendComment}
         />
         {keyboardVisible ? null : <BottomNav activeTab="home" onChange={onNavigate} onCreate={onCreate} />}
         <ActionSheet
@@ -319,7 +349,7 @@ function ActionSheet({ visible, title, options, onClose, onSelect }) {
   );
 }
 
-function CommentComposer({ keyboardVisible, replyingTo, onCancel }) {
+function CommentComposer({ inputRef, keyboardVisible, replyingTo, text, onCancel, onChangeText, onSend }) {
   return (
     <View style={[styles.composerWrap, keyboardVisible && styles.composerWrapKeyboard]}>
       {replyingTo ? (
@@ -332,12 +362,20 @@ function CommentComposer({ keyboardVisible, replyingTo, onCancel }) {
       ) : null}
       <View style={styles.composer}>
         <TextInput
+          ref={inputRef}
           multiline
           placeholder={replyingTo ? "Escreva uma resposta..." : "Escreva um comentario..."}
           placeholderTextColor={colors.textMuted}
+          value={text}
+          onChangeText={onChangeText}
           style={styles.composerInput}
         />
-        <Pressable style={styles.sendButton}>
+        <Pressable
+          accessibilityRole="button"
+          disabled={!text.trim()}
+          onPress={onSend}
+          style={[styles.sendButton, !text.trim() && styles.sendButtonDisabled]}
+        >
           <Icon name="send" color={colors.ink} size={19} strokeWidth={2.1} />
         </Pressable>
       </View>
@@ -634,6 +672,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.accent
+  },
+  sendButtonDisabled: {
+    opacity: 0.42
   },
   modalOverlay: {
     flex: 1,

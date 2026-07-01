@@ -5,6 +5,7 @@ import { AddToShelfScreen } from "../screens/AddToShelfScreen";
 import { ConnectionsScreen } from "../screens/ConnectionsScreen";
 import { BookDetailScreen } from "../screens/BookDetailScreen";
 import { BookRatingsScreen } from "../screens/BookRatingsScreen";
+import { BookReviewsScreen } from "../screens/BookReviewsScreen";
 import { CreateListScreen } from "../screens/CreateListScreen";
 import { CreateReviewScreen } from "../screens/CreateReviewScreen";
 import { EditProfileScreen } from "../screens/EditProfileScreen";
@@ -62,10 +63,12 @@ export function AppNavigator() {
   const [createdLists, setCreatedLists] = useState([]);
   const [createdReviews, setCreatedReviews] = useState([]);
   const [createdRatings, setCreatedRatings] = useState([]);
+  const [createdComments, setCreatedComments] = useState([]);
   const [readNotificationIds, setReadNotificationIds] = useState([]);
   const [history, setHistory] = useState([]);
   const allLists = [...createdLists, ...mockLists];
   const allReviews = [...createdReviews, ...mockReviews];
+  const allComments = [...createdComments, ...mockComments];
   const unreadNotificationsCount = mockNotifications.filter(
     (notification) => !notification.read && !readNotificationIds.includes(notification.id)
   ).length;
@@ -148,6 +151,12 @@ export function AppNavigator() {
     setScreen("bookRatings");
   }
 
+  function openBookReviews(bookId, previousRoute = currentRoute()) {
+    pushRoute(previousRoute);
+    setSelectedBookId(bookId);
+    setScreen("bookReviews");
+  }
+
   function openReview(reviewId, origin = "reviews", previousRoute = currentRoute()) {
     pushRoute(previousRoute);
     setSelectedReviewId(reviewId);
@@ -224,7 +233,7 @@ export function AppNavigator() {
       return;
     }
 
-    if (["book", "profile", "interactions", "notifications"].includes(origin)) {
+    if (["book", "bookReviews", "profile", "interactions", "notifications"].includes(origin)) {
       setScreen(origin);
       return;
     }
@@ -458,6 +467,22 @@ export function AppNavigator() {
     setScreen("review");
   }
 
+  function saveCreatedComment(commentDraft) {
+    const nextComment = {
+      id: `user-comment-${createdComments.length + 1}`,
+      reviewId: commentDraft.reviewId,
+      user: profileOverride?.name || "Yasmin",
+      handle: profileOverride?.handle || "@yasmin_le",
+      avatar: profileOverride?.avatar || "Y",
+      time: "agora",
+      text: commentDraft.replyingTo ? `@${commentDraft.replyingTo} ${commentDraft.text}` : commentDraft.text,
+      likes: 0,
+      liked: false
+    };
+
+    setCreatedComments((current) => [nextComment, ...current]);
+  }
+
   function withCreateSheet(content) {
     return (
       <>
@@ -480,6 +505,7 @@ export function AppNavigator() {
     return withCreateSheet(
       <HomeScreen
         reviews={allReviews}
+        comments={allComments}
         followedUserIds={followedUserIds}
         initialTab={homeInitialTab}
         likedReviewIds={likedReviewIds}
@@ -619,6 +645,7 @@ export function AppNavigator() {
         bookId={selectedBookId}
         ratings={createdRatings}
         reviews={allReviews}
+        comments={allComments}
         shelfEntry={shelfEntries.find((entry) => entry.bookId === selectedBookId)}
         onBack={() => goBack(() => goToOrigin(bookOrigin))}
         onAddToShelf={(bookId) =>
@@ -641,6 +668,9 @@ export function AppNavigator() {
         onReviewOpen={(reviewId, origin = "book") =>
           openReview(reviewId, origin, currentRoute({ screen: "book", selectedBookId }))
         }
+        onReviewsOpen={(bookId) =>
+          openBookReviews(bookId, currentRoute({ screen: "book", selectedBookId }))
+        }
         onSearchGenre={(genre) =>
           openSearchByGenre(genre, currentRoute({ screen: "book", selectedBookId }))
         }
@@ -658,6 +688,7 @@ export function AppNavigator() {
         bookId={selectedBookId}
         ratings={createdRatings}
         reviews={allReviews}
+        comments={allComments}
         onBack={() => goBack(goToBook)}
         onCreate={() => setCreateOpen(true)}
         onNavigate={navigateRoot}
@@ -668,6 +699,26 @@ export function AppNavigator() {
           openReview(reviewId, "book", currentRoute({ screen: "bookRatings", selectedBookId }))
         }
         onUserOpen={(userId) => openUser(userId, currentRoute({ screen: "bookRatings", selectedBookId }))}
+      />
+    );
+  }
+
+  if (screen === "bookReviews") {
+    return withCreateSheet(
+      <BookReviewsScreen
+        key={selectedBookId}
+        bookId={selectedBookId}
+        reviews={allReviews}
+        onBack={() => goBack(goToBook)}
+        onCreate={() => setCreateOpen(true)}
+        onCreateReview={(bookId) =>
+          openCreateReview(bookId, "review", "bookReviews", currentRoute({ screen: "bookReviews", selectedBookId }))
+        }
+        onNavigate={navigateRoot}
+        onReviewOpen={(reviewId) =>
+          openReview(reviewId, "bookReviews", currentRoute({ screen: "bookReviews", selectedBookId }))
+        }
+        onUserOpen={(userId) => openUser(userId, currentRoute({ screen: "bookReviews", selectedBookId }))}
       />
     );
   }
@@ -693,12 +744,14 @@ export function AppNavigator() {
         likedCommentIds={likedCommentIds}
         likedReviewIds={likedReviewIds}
         saved={savedReviewIds.includes(selectedReviewId)}
+        comments={allComments}
         reviews={allReviews}
         onBack={() => goBack(() => goToReviewOrigin(reviewOrigin))}
         onBookOpen={(bookId) =>
           openBook(bookId, "review", currentRoute({ screen: "review", selectedReviewId }))
         }
         onCreate={() => setCreateOpen(true)}
+        onCommentCreate={saveCreatedComment}
         onNavigate={navigateRoot}
         onToggleCommentLike={toggleCommentLike}
         onToggleReviewLike={toggleReviewLike}
@@ -747,6 +800,7 @@ export function AppNavigator() {
       <InteractionsScreen
         likedCommentIds={likedCommentIds}
         likedReviewIds={likedReviewIds}
+        comments={allComments}
         lists={allLists}
         reviews={allReviews}
         savedListIds={savedListIds}
