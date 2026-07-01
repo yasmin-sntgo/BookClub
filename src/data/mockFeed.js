@@ -298,8 +298,8 @@ export const mockNotifications = [
   },
   {
     id: "notification-2",
-    type: "comment",
-    title: "Carol comentou na sua resenha",
+    type: "reply",
+    title: "Carol respondeu sua resenha",
     body: "Eu ainda estou criando coragem para ler, mas essa resenha me convenceu.",
     time: "33 min",
     read: false,
@@ -310,10 +310,20 @@ export const mockNotifications = [
     id: "notification-3",
     type: "like",
     title: "Marcos curtiu sua resenha",
-    body: "Amanhecer na Colheita recebeu uma nova interacao.",
+    body: "Amanhecer na Colheita recebeu uma nova curtida.",
     time: "1 h",
     read: true,
     userId: "marcos",
+    reviewId: "review-1"
+  },
+  {
+    id: "notification-5",
+    type: "comment",
+    title: "Lia respondeu seu comentario",
+    body: "A parte final me deixou destruida. Nao esperava gostar tanto.",
+    time: "3 h",
+    read: false,
+    userId: "lia",
     reviewId: "review-1"
   },
   {

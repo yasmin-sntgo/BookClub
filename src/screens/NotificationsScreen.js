@@ -85,7 +85,7 @@ export function NotificationsScreen({
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Sem notificacoes</Text>
               <Text style={styles.emptyText}>
-                Curtidas, comentarios, seguidores e novidades das listas aparecem aqui.
+                Respostas, curtidas, seguidores e listas salvas aparecem aqui.
               </Text>
             </View>
           )}
@@ -115,12 +115,13 @@ function NotificationCard({ notification, unread, onPress }) {
       </View>
 
       <View style={styles.cardCopy}>
-        <View style={styles.cardTop}>
-          <Text style={styles.cardTitle} numberOfLines={2}>{notification.title}</Text>
+        <View style={styles.metaRow}>
+          <Text style={styles.cardType}>{getTypeLabel(notification.type)}</Text>
+          <Text style={styles.cardTime}>{notification.time}</Text>
           {unread ? <View style={styles.unreadDot} /> : null}
         </View>
-        <Text style={styles.cardBody} numberOfLines={2}>{notification.body}</Text>
-        <Text style={styles.cardTime}>{notification.time}</Text>
+        <Text style={styles.cardTitle} numberOfLines={1}>{notification.title}</Text>
+        <Text style={styles.cardBody} numberOfLines={1}>{notification.body}</Text>
       </View>
     </Pressable>
   );
@@ -131,7 +132,7 @@ function getIconName(type) {
     return "user";
   }
 
-  if (type === "comment") {
+  if (type === "comment" || type === "reply") {
     return "comment";
   }
 
@@ -144,6 +145,30 @@ function getIconName(type) {
   }
 
   return "bell";
+}
+
+function getTypeLabel(type) {
+  if (type === "follow") {
+    return "Seguidor";
+  }
+
+  if (type === "reply") {
+    return "Resposta";
+  }
+
+  if (type === "comment") {
+    return "Comentario";
+  }
+
+  if (type === "like") {
+    return "Curtida";
+  }
+
+  if (type === "list") {
+    return "Lista";
+  }
+
+  return "Aviso";
 }
 
 function isUnread(notification, readNotificationIds) {
@@ -232,7 +257,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: 120
   },
   list: {
@@ -240,10 +265,10 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border
   },
   card: {
-    minHeight: 86,
+    minHeight: 76,
     flexDirection: "row",
-    gap: spacing.md,
-    paddingVertical: spacing.md,
+    gap: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border
   },
@@ -251,9 +276,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(157,192,216,0.2)"
   },
   iconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.025)"
@@ -265,38 +290,43 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0
   },
-  cardTop: {
+  metaRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 3
+  },
+  cardType: {
+    color: colors.accent,
+    fontFamily: fonts.bodyBold,
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: "uppercase"
   },
   cardTitle: {
-    flex: 1,
     color: colors.text,
     fontFamily: fonts.bodyBold,
     fontSize: 14,
-    lineHeight: 18
+    lineHeight: 17
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginTop: 4,
     backgroundColor: colors.accent
   },
   cardBody: {
     color: "#d1c8b8",
     fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 5
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 3
   },
   cardTime: {
     color: colors.textMuted,
     fontFamily: fonts.bodyBold,
     fontSize: 11,
-    lineHeight: 14,
-    marginTop: 8
+    lineHeight: 14
   },
   empty: {
     minHeight: 148,
