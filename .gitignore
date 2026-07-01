@@ -1,0 +1,14 @@
+node_modules/
+.expo/
+.npm-cache/
+dist/
+web-build/
+
+*.log
+expo-profile.log
+
+.env
+.env.*
+
+.DS_Store
+Thumbs.db

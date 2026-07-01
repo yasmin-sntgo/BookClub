@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "BookClub Login",
+    "slug": "bookclub-login",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}
