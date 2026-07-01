@@ -16,9 +16,11 @@ import { ListDetailScreen } from "../screens/ListDetailScreen";
 import { ListsScreen } from "../screens/ListsScreen";
 import { NotificationsScreen } from "../screens/NotificationsScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
+import { ProfileShelfScreen } from "../screens/ProfileShelfScreen";
 import { RegisterScreen } from "../screens/RegisterScreen";
 import { ReviewDetailScreen } from "../screens/ReviewDetailScreen";
 import { SearchScreen } from "../screens/SearchScreen";
+import { SettingsScreen } from "../screens/SettingsScreen";
 import { ShelfScreen } from "../screens/ShelfScreen";
 import { mockComments, mockLists, mockNotifications, mockReviews } from "../data/mockFeed";
 
@@ -38,6 +40,7 @@ export function AppNavigator() {
   const [selectedListId, setSelectedListId] = useState("before-die");
   const [selectedReviewId, setSelectedReviewId] = useState("review-1");
   const [selectedShelfBookId, setSelectedShelfBookId] = useState(null);
+  const [selectedShelfUserId, setSelectedShelfUserId] = useState("lia");
   const [selectedUserId, setSelectedUserId] = useState("lia");
   const [selectedConnectionsUserId, setSelectedConnectionsUserId] = useState("yasmin");
   const [profileOverride, setProfileOverride] = useState(null);
@@ -52,6 +55,7 @@ export function AppNavigator() {
   const [reviewOrigin, setReviewOrigin] = useState("reviews");
   const [savedListIds, setSavedListIds] = useState(["crying", "sci-fi-start"]);
   const [savedReviewIds, setSavedReviewIds] = useState([]);
+  const [shelfPrivate, setShelfPrivate] = useState(false);
   const [followedUserIds, setFollowedUserIds] = useState(["carol"]);
   const [likedReviewIds, setLikedReviewIds] = useState(
     mockReviews.filter((review) => review.liked).map((review) => review.id)
@@ -81,6 +85,7 @@ export function AppNavigator() {
       selectedListId,
       selectedReviewId,
       selectedShelfBookId,
+      selectedShelfUserId,
       selectedUserId,
       selectedConnectionsUserId,
       homeInitialTab,
@@ -102,6 +107,7 @@ export function AppNavigator() {
     setSelectedListId(route.selectedListId);
     setSelectedReviewId(route.selectedReviewId);
     setSelectedShelfBookId(route.selectedShelfBookId ?? null);
+    setSelectedShelfUserId(route.selectedShelfUserId ?? "lia");
     setSelectedUserId(route.selectedUserId ?? "lia");
     setSelectedConnectionsUserId(route.selectedConnectionsUserId ?? "yasmin");
     setHomeInitialTab(route.homeInitialTab ?? "books");
@@ -198,6 +204,22 @@ export function AppNavigator() {
   function openInteractions(previousRoute = currentRoute()) {
     pushRoute(previousRoute);
     setScreen("interactions");
+  }
+
+  function openSettings(previousRoute = currentRoute()) {
+    pushRoute(previousRoute);
+    setScreen("settings");
+  }
+
+  function openProfileShelf(userId, previousRoute = currentRoute()) {
+    if (userId === "yasmin") {
+      navigateRoot("library");
+      return;
+    }
+
+    pushRoute(previousRoute);
+    setSelectedShelfUserId(userId);
+    setScreen("profileShelf");
   }
 
   function openAddToShelf(bookId = null, previousRoute = currentRoute()) {
@@ -776,6 +798,10 @@ export function AppNavigator() {
         onCreate={() => setCreateOpen(true)}
         onEditProfile={() => openEditProfile(currentRoute({ screen: "profile", selectedUserId, profileInitialTab }))}
         onInteractionsOpen={() => openInteractions(currentRoute({ screen: "profile", selectedUserId, profileInitialTab }))}
+        onSettingsOpen={() => openSettings(currentRoute({ screen: "profile", selectedUserId, profileInitialTab }))}
+        onShelfOpen={(userId) =>
+          openProfileShelf(userId, currentRoute({ screen: "profile", selectedUserId, profileInitialTab }))
+        }
         onConnectionsOpen={(userId, initialTab) =>
           openConnections(userId, initialTab, currentRoute({ screen: "profile", selectedUserId, profileInitialTab }))
         }
@@ -791,6 +817,7 @@ export function AppNavigator() {
         profileOverride={profileOverride}
         ratings={createdRatings}
         reviews={allReviews}
+        shelfPrivate={shelfPrivate}
       />
     );
   }
@@ -817,6 +844,34 @@ export function AppNavigator() {
         onReviewOpen={(reviewId, origin = "reviews") =>
           openReview(reviewId, origin, currentRoute({ screen: "interactions" }))
         }
+      />
+    );
+  }
+
+  if (screen === "profileShelf") {
+    return withCreateSheet(
+      <ProfileShelfScreen
+        privateShelf={selectedShelfUserId === "yasmin" && shelfPrivate}
+        userId={selectedShelfUserId}
+        shelfEntries={shelfEntries}
+        onBack={() => goBack(() => goHome(homeInitialTab))}
+        onBookOpen={(bookId) =>
+          openBook(bookId, "profileShelf", currentRoute({ screen: "profileShelf", selectedShelfUserId }))
+        }
+        onCreate={() => setCreateOpen(true)}
+        onNavigate={navigateRoot}
+      />
+    );
+  }
+
+  if (screen === "settings") {
+    return withCreateSheet(
+      <SettingsScreen
+        onBack={() => goBack(() => goHome(homeInitialTab))}
+        onCreate={() => setCreateOpen(true)}
+        onNavigate={navigateRoot}
+        onShelfPrivacyChange={setShelfPrivate}
+        shelfPrivate={shelfPrivate}
       />
     );
   }

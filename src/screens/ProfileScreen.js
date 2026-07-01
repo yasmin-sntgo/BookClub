@@ -28,6 +28,8 @@ export function ProfileScreen({
   onCreate,
   onEditProfile,
   onInteractionsOpen,
+  onSettingsOpen,
+  onShelfOpen,
   onConnectionsOpen,
   onListOpen,
   onNavigate,
@@ -36,7 +38,8 @@ export function ProfileScreen({
   onToggleFollow,
   profileOverride,
   ratings = [],
-  reviews = mockReviews
+  reviews = mockReviews,
+  shelfPrivate = false
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -105,7 +108,7 @@ export function ProfileScreen({
     }
 
     if (option === "Configuracoes") {
-      setNotice("Configuracoes vao concentrar privacidade, conta e preferencias.");
+      onSettingsOpen?.();
       return;
     }
 
@@ -181,11 +184,16 @@ export function ProfileScreen({
                 {isOwnProfile ? "Editar perfil" : followingProfile ? "Seguindo" : "Seguir"}
               </Text>
             </Pressable>
-            {!isOwnProfile ? (
-              <Pressable accessibilityRole="button" style={styles.secondaryAction}>
-                <Icon name="comment" color={colors.text} size={22} strokeWidth={2.2} />
-              </Pressable>
-            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => onShelfOpen?.(user.id)}
+              style={styles.shelfAction}
+            >
+              <Icon name="books" color={colors.text} size={19} strokeWidth={2.1} />
+              <Text style={styles.shelfActionText}>
+                {isOwnProfile && shelfPrivate ? "Privada" : "Estante"}
+              </Text>
+            </Pressable>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
@@ -528,15 +536,23 @@ const styles = StyleSheet.create({
   followingActionText: {
     color: colors.text
   },
-  secondaryAction: {
-    width: 48,
+  shelfAction: {
+    minWidth: 104,
     minHeight: 46,
     borderRadius: 18,
+    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    gap: 7,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.04)",
     borderWidth: 1,
     borderColor: "rgba(240,236,228,0.15)"
+  },
+  shelfActionText: {
+    color: colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 12
   },
   sectionHeader: {
     flexDirection: "row",
