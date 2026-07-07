@@ -22,6 +22,12 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
   const publicLists = lists.filter((list) => !list.private);
   const savedLists = lists.filter((list) => savedListIds.includes(list.id));
   const userLists = lists.filter((list) => list.creator === "Yasmin");
+  const personalLists = [
+    ...userLists.map((list) => ({ ...list, personalLabel: list.private ? "sua lista privada" : "sua lista" })),
+    ...savedLists
+      .filter((list) => !userLists.some((userList) => userList.id === list.id))
+      .map((list) => ({ ...list, personalLabel: "lista salva" }))
+  ];
   const exploreLists = activeCategory === "Todos"
     ? publicLists
     : publicLists.filter((list) => list.tag === activeCategory.toLowerCase());
@@ -51,18 +57,20 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
               </View>
               <View style={styles.personalCopy}>
                 <Text style={styles.personalTitle}>
-                  {userLists.length ? `${userLists.length} lista criada` : "Nenhuma lista ainda"}
+                  {personalLists.length ? `${personalLists.length} listas na sua area` : "Nenhuma lista ainda"}
                 </Text>
                 <Text style={styles.personalText}>
-                  {userLists.length ? "publicas e privadas ficam reunidas aqui." : "Crie sua primeira lista pelo botao +."}
+                  {personalLists.length
+                    ? `${userLists.length} criadas - ${savedLists.length} salvas`
+                    : "Crie sua primeira lista pelo botao +."}
                 </Text>
               </View>
               <Icon name="next" color={colors.textMuted} size={20} strokeWidth={2.1} />
             </Pressable>
 
-            {showUserLists && userLists.length > 0 ? (
+            {showUserLists && personalLists.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personalListsRail}>
-                {userLists.map((list) => (
+                {personalLists.map((list) => (
                   <SavedListCard
                     key={`mine-${list.id}`}
                     list={list}
@@ -99,41 +107,11 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
           </ScrollView>
 
           <View style={styles.section}>
-            <SectionHeader title="Salvas por voce" />
-            {savedLists.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.savedMiniRail}>
-                {savedLists.map((list) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    key={`saved-${list.id}`}
-                    onPress={() => onListOpen?.(list.id)}
-                    style={styles.savedMiniCard}
-                  >
-                    <Text style={styles.savedMiniTitle} numberOfLines={2}>{list.title}</Text>
-                    <Text style={styles.savedMiniMeta} numberOfLines={1}>{list.booksCount} livros - {list.handle}</Text>
-                    <View style={styles.savedMiniFooter}>
-                      <Icon name="bookmark" color={colors.accent} size={14} strokeWidth={2} />
-                      <Text style={styles.savedMiniFooterText}>{list.saves} salvos</Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>Nenhuma lista salva</Text>
-                <Text style={styles.emptyText}>As listas que voce salvar aparecem aqui.</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.section}>
             <SectionHeader title="Explore listas" />
             {exploreLists.map((list) => (
               <ListCard
                 key={list.id}
                 list={list}
-                books={list.bookIds.map((bookId) => booksById[bookId]).filter(Boolean)}
-                onBookOpen={onBookOpen}
                 onListOpen={onListOpen}
               />
             ))}
@@ -225,6 +203,7 @@ function SavedListCard({ list, books, onBookOpen, onListOpen }) {
   return (
     <Pressable accessibilityRole="button" onPress={() => onListOpen?.(list.id)} style={styles.savedCard}>
       <PreviewStack books={books} onBookOpen={onBookOpen} compact />
+      <Text style={styles.savedLabel}>{list.personalLabel}</Text>
       <Text style={styles.savedTitle} numberOfLines={2}>{list.title}</Text>
       <Text style={styles.savedMeta} numberOfLines={1}>
         {list.private ? "privada" : `${list.booksCount} livros`} - {list.handle}
@@ -233,7 +212,7 @@ function SavedListCard({ list, books, onBookOpen, onListOpen }) {
   );
 }
 
-function ListCard({ list, books, onBookOpen, onListOpen }) {
+function ListCard({ list, onListOpen }) {
   return (
     <Pressable accessibilityRole="button" onPress={() => onListOpen?.(list.id)} style={styles.listCard}>
       <View style={styles.listTop}>
@@ -245,8 +224,7 @@ function ListCard({ list, books, onBookOpen, onListOpen }) {
         <Text style={styles.creator}>{list.handle}</Text>
       </View>
 
-      <Text style={styles.listDescription} numberOfLines={2}>{list.description}</Text>
-      <PreviewStack books={books} onBookOpen={onBookOpen} compact />
+      <Text style={styles.listDescription} numberOfLines={3}>{list.description}</Text>
     </Pressable>
   );
 }
@@ -417,17 +395,17 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl
   },
   moodChip: {
-    minHeight: 34,
-    paddingHorizontal: spacing.md,
-    borderRadius: 17,
+    minHeight: 30,
+    paddingHorizontal: 13,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.035)"
+    borderColor: "rgba(240,236,228,0.1)",
+    backgroundColor: "transparent"
   },
   activeMoodChip: {
-    backgroundColor: colors.accentWash,
+    backgroundColor: "rgba(157,192,216,0.12)",
     borderColor: "rgba(157,192,216,0.2)"
   },
   moodText: {
@@ -443,7 +421,7 @@ const styles = StyleSheet.create({
   },
   savedCard: {
     width: 174,
-    minHeight: 184,
+    minHeight: 202,
     borderRadius: 24,
     padding: spacing.md,
     borderWidth: 1,
@@ -457,51 +435,18 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: spacing.sm
   },
+  savedLabel: {
+    ...type.label,
+    color: colors.accent,
+    textTransform: "uppercase",
+    marginTop: spacing.sm
+  },
   savedMeta: {
     color: colors.textMuted,
     fontFamily: fonts.bodyBold,
     fontSize: 11,
     lineHeight: 14,
     marginTop: 5
-  },
-  savedMiniRail: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm
-  },
-  savedMiniCard: {
-    width: 176,
-    minHeight: 104,
-    borderRadius: 20,
-    padding: spacing.md,
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.032)"
-  },
-  savedMiniTitle: {
-    color: colors.text,
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    lineHeight: 16
-  },
-  savedMiniMeta: {
-    color: colors.textMuted,
-    fontFamily: fonts.body,
-    fontSize: 11,
-    lineHeight: 14,
-    marginTop: 6
-  },
-  savedMiniFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: spacing.sm
-  },
-  savedMiniFooterText: {
-    color: colors.accent,
-    fontFamily: fonts.bodyBold,
-    fontSize: 11,
-    lineHeight: 14
   },
   sectionHeader: {
     paddingHorizontal: spacing.lg,
@@ -523,18 +468,15 @@ const styles = StyleSheet.create({
   },
   listCard: {
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.04)"
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(240,236,228,0.08)"
   },
   listTop: {
     flexDirection: "row",
     gap: spacing.md,
     alignItems: "flex-start",
-    marginBottom: spacing.sm
+    marginBottom: 7
   },
   listCopy: {
     flex: 1,
@@ -542,14 +484,14 @@ const styles = StyleSheet.create({
   },
   listTag: {
     ...type.label,
-    color: colors.warm,
+    color: colors.accent,
     textTransform: "uppercase",
     marginBottom: 4
   },
   listTitle: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 22,
+    fontSize: 21,
     lineHeight: 24
   },
   listMeta: {
@@ -571,8 +513,7 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     fontFamily: fonts.body,
     fontSize: 13,
-    lineHeight: 19,
-    marginBottom: spacing.md
+    lineHeight: 19
   },
   emptyCard: {
     marginHorizontal: spacing.lg,

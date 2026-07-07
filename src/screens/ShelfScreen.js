@@ -4,13 +4,12 @@ import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "rea
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { RatingStars } from "../components/RatingStars";
 import { getBooks } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
 
-const filters = ["Todos", "Lendo", "Quero ler", "Lidos", "Favoritos", "Abandonados"];
+const filters = ["Todos", "Lendo", "Quero ler", "Lidos"];
 const mockBooks = getBooks();
 
 export function ShelfScreen({
@@ -40,18 +39,16 @@ export function ShelfScreen({
       abandoned: entriesWithBooks.filter((entry) => entry.status === "abandoned").map((entry) => entry.book)
     };
   }, [booksById, shelfEntries]);
-  const shelfStats = useMemo(
-    () => [
-      { label: "lendo", value: shelfBooks.reading.length },
-      { label: "quero ler", value: shelfBooks.want.length },
-      { label: "lidos", value: shelfBooks.read.length },
-      { label: "favoritos", value: shelfBooks.favorites.length }
-    ],
-    [shelfBooks]
-  );
   const visibleSections = useMemo(
     () => getVisibleSections(activeFilter, shelfBooks),
     [activeFilter, shelfBooks]
+  );
+  const sectionsToRender = useMemo(
+    () =>
+      activeFilter === "Todos" && shelfBooks.reading.length > 0
+        ? visibleSections.filter((section) => section.key !== "reading")
+        : visibleSections,
+    [activeFilter, shelfBooks.reading.length, visibleSections]
   );
   const hasBooks = Object.values(shelfBooks).some((books) => books.length > 0);
 
@@ -79,14 +76,9 @@ export function ShelfScreen({
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {hasBooks ? (
             <>
-              <View style={styles.statsGrid}>
-                {shelfStats.map((stat) => (
-                  <View key={stat.label} style={styles.statCard}>
-                    <Text style={styles.statValue}>{stat.value}</Text>
-                    <Text style={styles.statLabel}>{stat.label}</Text>
-                  </View>
-                ))}
-              </View>
+              {activeFilter === "Todos" && shelfBooks.reading.length > 0 ? (
+                <ReadingNowSection books={shelfBooks.reading} onBookOpen={onBookOpen} />
+              ) : null}
 
               <ScrollView
                 horizontal
@@ -104,22 +96,20 @@ export function ShelfScreen({
                 ))}
               </ScrollView>
 
-              {visibleSections.length > 0 ? (
-                visibleSections.map((section) =>
+              {sectionsToRender.length > 0 ? (
+                sectionsToRender.map((section) =>
                   section.type === "favorites" ? (
                     <FavoritesSection
                       key={section.key}
                       books={section.books}
                       onBookOpen={onBookOpen}
-                      onShowAll={() => selectFilter("Favoritos")}
                     />
                   ) : (
                     <BookRail
                       key={section.key}
                       title={section.title}
-                      action={activeFilter === "Todos" ? "Ver todos" : undefined}
+                      hint={section.hint}
                       books={section.books}
-                      onAction={() => selectFilter(section.filter)}
                       onBookOpen={onBookOpen}
                       muted={section.muted}
                     />
@@ -145,11 +135,36 @@ export function ShelfScreen({
 
 function getVisibleSections(activeFilter, shelfBooks) {
   const sections = [
+    {
+      key: "reading",
+      filter: "Lendo",
+      title: "Lendo agora",
+      hint: "livros em andamento",
+      books: shelfBooks.reading
+    },
+    {
+      key: "want",
+      filter: "Quero ler",
+      title: "Quero ler",
+      hint: "proximas escolhas",
+      books: shelfBooks.want
+    },
+    {
+      key: "read",
+      filter: "Lidos",
+      title: "Lidos",
+      hint: "ja passaram pela sua estante",
+      books: shelfBooks.read
+    },
     { key: "favorites", type: "favorites", title: "Favoritos", books: shelfBooks.favorites },
-    { key: "reading", filter: "Lendo", title: "Lendo agora", books: shelfBooks.reading },
-    { key: "want", filter: "Quero ler", title: "Quero ler", books: shelfBooks.want },
-    { key: "read", filter: "Lidos", title: "Lidos", books: shelfBooks.read },
-    { key: "abandoned", filter: "Abandonados", title: "Abandonados", books: shelfBooks.abandoned, muted: true }
+    {
+      key: "abandoned",
+      filter: "Abandonados",
+      title: "Abandonados",
+      hint: "pausados ou deixados para depois",
+      books: shelfBooks.abandoned,
+      muted: true
+    }
   ];
 
   if (activeFilter === "Todos") {
@@ -165,6 +180,37 @@ function getVisibleSections(activeFilter, shelfBooks) {
   };
 
   return sections.filter((section) => section.key === filterMap[activeFilter] && section.books.length > 0);
+}
+
+function ReadingNowSection({ books, onBookOpen }) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleBooks = expanded ? books : books.slice(0, 4);
+  const hasMore = visibleBooks.length < books.length;
+
+  return (
+    <View style={styles.readingBlock}>
+      <SectionHeader
+        title="Lendo agora"
+        hint={books.length > 1 ? `${books.length} leituras em andamento` : "sua leitura em andamento"}
+        action={hasMore ? "Ver mais" : undefined}
+        onAction={() => setExpanded(true)}
+      />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.readingRail}>
+        {visibleBooks.map((book) => (
+          <Pressable key={`reading-now-${book.id}`} onPress={() => onBookOpen?.(book.id)} style={styles.readingCard}>
+            <View style={styles.readingCover}>
+              <BookCover book={book} size="medium" />
+            </View>
+            <View style={styles.readingCopy}>
+              <Text style={styles.readingStatus}>em andamento</Text>
+              <Text style={styles.readingTitle} numberOfLines={3}>{book.title}</Text>
+              <Text style={styles.readingAuthor} numberOfLines={1}>{book.author}</Text>
+            </View>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
 }
 
 function EmptyShelf({ onAddBook, onExplore }) {
@@ -187,23 +233,31 @@ function EmptyShelf({ onAddBook, onExplore }) {
   );
 }
 
-function FavoritesSection({ books, onBookOpen, onShowAll }) {
+function FavoritesSection({ books, onBookOpen }) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleBooks = expanded ? books : books.slice(0, 4);
+  const hasMore = visibleBooks.length < books.length;
+
   return (
     <View style={styles.section}>
-      <SectionHeader title="Favoritos" action="Ver todos" onAction={onShowAll} />
+      <SectionHeader
+        title="Favoritos"
+        hint="os livros que voce quer destacar"
+        action={hasMore ? "Ver mais" : undefined}
+        onAction={() => setExpanded(true)}
+      />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.favoritesRail}
       >
-        {books.map((book) => (
+        {visibleBooks.map((book) => (
           <Pressable key={`favorite-${book.id}`} onPress={() => onBookOpen?.(book.id)} style={styles.favoriteCard}>
             <BookCover book={book} size="medium" />
             <View style={styles.favoriteInfo}>
-              <Text style={styles.favoriteLabel}>queridinho</Text>
+              <Text style={styles.favoriteLabel}>favorito</Text>
               <Text style={styles.favoriteTitle} numberOfLines={2}>{book.title}</Text>
               <Text style={styles.favoriteAuthor} numberOfLines={1}>{book.author}</Text>
-              <RatingStars rating={5} size={14} />
             </View>
           </Pressable>
         ))}
@@ -212,12 +266,21 @@ function FavoritesSection({ books, onBookOpen, onShowAll }) {
   );
 }
 
-function BookRail({ title, action, books, onAction, onBookOpen, muted = false }) {
+function BookRail({ title, hint, books, onBookOpen, muted = false }) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleBooks = expanded ? books : books.slice(0, 6);
+  const hasMore = visibleBooks.length < books.length;
+
   return (
     <View style={[styles.section, muted && styles.mutedSection]}>
-      <SectionHeader title={title} action={action} onAction={onAction} />
+      <SectionHeader
+        title={title}
+        hint={hint}
+        action={hasMore ? "Ver mais" : undefined}
+        onAction={() => setExpanded(true)}
+      />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bookRail}>
-        {books.map((book) => (
+        {visibleBooks.map((book) => (
           <Pressable key={`${title}-${book.id}`} onPress={() => onBookOpen?.(book.id)} style={styles.bookItem}>
             <View style={muted && styles.mutedCover}>
               <BookCover book={book} size="medium" />
@@ -240,10 +303,13 @@ function EmptyFilter({ filter }) {
   );
 }
 
-function SectionHeader({ title, action, onAction }) {
+function SectionHeader({ title, hint, action, onAction }) {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionTitleBlock}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+      </View>
       {action && onAction ? (
         <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8}>
           <Text style={styles.sectionAction}>{action}</Text>
@@ -308,52 +374,73 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: 120
   },
-  statsGrid: {
-    paddingHorizontal: spacing.lg,
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.lg
+  readingBlock: {
+    marginBottom: spacing.xl
   },
-  statCard: {
-    flex: 1,
-    minHeight: 68,
-    borderRadius: 18,
+  readingRail: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md
+  },
+  readingCard: {
+    width: 236,
+    minHeight: 178,
+    borderRadius: 24,
+    padding: spacing.md,
+    flexDirection: "row",
+    gap: spacing.md,
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    alignItems: "center",
+    borderColor: "rgba(157,192,216,0.18)",
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.28,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 26,
+    elevation: 8
+  },
+  readingCover: {
+    width: 112
+  },
+  readingCopy: {
+    flex: 1,
+    minWidth: 0,
     justifyContent: "center"
   },
-  statValue: {
+  readingStatus: {
+    ...type.label,
+    color: colors.accent,
+    textTransform: "uppercase",
+    marginBottom: 8
+  },
+  readingTitle: {
     color: colors.text,
     fontFamily: fonts.display,
     fontSize: 22,
     lineHeight: 25
   },
-  statLabel: {
-    color: colors.textMuted,
-    fontFamily: fonts.bodyBold,
-    fontSize: 10,
-    lineHeight: 12,
-    marginTop: 4
+  readingAuthor: {
+    color: colors.textSoft,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 17,
+    marginTop: 6
   },
   filters: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
-    paddingBottom: spacing.lg
+    paddingBottom: spacing.xl
   },
   filterChip: {
-    minHeight: 34,
-    paddingHorizontal: spacing.md,
+    minHeight: 30,
+    paddingHorizontal: 13,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 17,
-    backgroundColor: "rgba(255,255,255,0.035)",
+    borderRadius: 15,
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: colors.border
+    borderColor: "rgba(240,236,228,0.1)"
   },
   activeChip: {
-    backgroundColor: colors.accentWash,
+    backgroundColor: "rgba(157,192,216,0.12)",
     borderColor: "rgba(157,192,216,0.2)"
   },
   filterText: {
@@ -373,15 +460,26 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "flex-end",
     justifyContent: "space-between",
     marginBottom: spacing.md
+  },
+  sectionTitleBlock: {
+    flex: 1,
+    paddingRight: spacing.md
   },
   sectionTitle: {
     color: colors.text,
     fontFamily: fonts.display,
     fontSize: 22,
     lineHeight: 26
+  },
+  sectionHint: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 15,
+    marginTop: 2
   },
   sectionAction: {
     color: colors.accent,
@@ -393,46 +491,44 @@ const styles = StyleSheet.create({
     gap: spacing.md
   },
   favoriteCard: {
-    width: 236,
-    minHeight: 150,
-    borderRadius: 24,
+    width: 224,
+    minHeight: 156,
+    borderRadius: 22,
     padding: spacing.md,
     flexDirection: "row",
     gap: spacing.md,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "rgba(243,198,91,0.08)",
     borderWidth: 1,
-    borderColor: "rgba(240,236,228,0.1)",
+    borderColor: "rgba(243,198,91,0.16)",
     shadowColor: colors.shadow,
-    shadowOpacity: 0.34,
-    shadowOffset: { width: 0, height: 14 },
-    shadowRadius: 28,
-    elevation: 10
+    shadowOpacity: 0.24,
+    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 22,
+    elevation: 7
   },
   favoriteInfo: {
     flex: 1,
     minWidth: 0,
-    paddingTop: 2
+    justifyContent: "center"
   },
   favoriteLabel: {
     ...type.label,
     color: colors.warm,
     textTransform: "uppercase",
-    lineHeight: 12
+    marginBottom: 7
   },
   favoriteTitle: {
     color: colors.text,
     fontFamily: fonts.display,
     fontSize: 19,
-    lineHeight: 21,
-    marginTop: 6
+    lineHeight: 21
   },
   favoriteAuthor: {
     color: colors.textSoft,
     fontFamily: fonts.body,
     fontSize: 12,
     lineHeight: 15,
-    marginTop: 3,
-    marginBottom: spacing.sm
+    marginTop: 4
   },
   bookRail: {
     paddingHorizontal: spacing.lg,
