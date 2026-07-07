@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
@@ -125,6 +125,8 @@ function Header({ onNotificationsOpen, onUserOpen, unreadNotificationsCount }) {
 
 function BooksPanel({ books, onBookOpen }) {
   const [expandedRails, setExpandedRails] = useState([]);
+  const featuredBook = books[0];
+  const popularBooks = books.slice(1);
 
   function toggleRail(title) {
     setExpandedRails((current) =>
@@ -134,11 +136,13 @@ function BooksPanel({ books, onBookOpen }) {
 
   return (
     <View>
+      {featuredBook ? (
+        <FeaturedBook book={featuredBook} onBookOpen={onBookOpen} />
+      ) : null}
       <BookRail
         title="Popular agora"
         action={expandedRails.includes("Popular agora") ? null : "Ver todos"}
-        books={expandedRails.includes("Popular agora") ? books : books.slice(0, 5)}
-        featured
+        books={expandedRails.includes("Popular agora") ? popularBooks : popularBooks.slice(0, 5)}
         onAction={() => toggleRail("Popular agora")}
         onBookOpen={onBookOpen}
       />
@@ -158,6 +162,31 @@ function BooksPanel({ books, onBookOpen }) {
   );
 }
 
+function FeaturedBook({ book, onBookOpen }) {
+  return (
+    <View style={styles.featuredSection}>
+      <Pressable
+        onPress={() => onBookOpen?.(book.id, "books")}
+        style={({ pressed }) => [styles.featuredBookCard, pressed && styles.featuredBookCardPressed]}
+      >
+        <View style={styles.featuredRibbon} />
+        <View style={styles.featuredCoverFloat}>
+          <BookCover book={book} size="medium" />
+        </View>
+        <View style={styles.featuredCopy}>
+          <Text style={styles.featuredLabel}>Popular agora</Text>
+          <Text style={styles.featuredTitle} numberOfLines={3}>{book.title}</Text>
+          <Text style={styles.featuredAuthor} numberOfLines={1}>{book.author}</Text>
+          <View style={styles.featuredMetaLine}>
+            <RatingStars rating={book.rating} size={13} />
+            <Text style={styles.featuredMetaText}>{book.genre}</Text>
+          </View>
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
 function BookRail({ title, action, books, compact = false, featured = false, onAction, onBookOpen }) {
   return (
     <View style={styles.railSection}>
@@ -171,11 +200,16 @@ function BookRail({ title, action, books, compact = false, featured = false, onA
           <Pressable
             key={`${title}-${book.id}`}
             onPress={() => onBookOpen?.(book.id, "books")}
-            style={[styles.bookItem, compact && styles.compactBookItem, featured && styles.featuredBookItem]}
+            style={({ pressed }) => [
+              styles.bookItem,
+              compact && styles.compactBookItem,
+              featured && styles.featuredBookItem,
+              pressed && styles.bookItemPressed
+            ]}
           >
             <BookCover book={book} size={compact ? "small" : "medium"} />
             <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
-            <Text style={styles.bookAuthor} numberOfLines={1}>{book.author}</Text>
+            {!compact ? <Text style={styles.bookAuthor} numberOfLines={1}>{book.author}</Text> : null}
           </Pressable>
         ))}
       </ScrollView>
@@ -192,7 +226,7 @@ function BookGrid({ title, books, onBookOpen }) {
           <Pressable
             key={book.gridId}
             onPress={() => onBookOpen?.(book.id, "books")}
-            style={[styles.bookItem, styles.gridBookItem]}
+            style={({ pressed }) => [styles.bookItem, styles.gridBookItem, pressed && styles.bookItemPressed]}
           >
             <BookCover book={book} size="grid" />
             <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
@@ -364,46 +398,79 @@ function findUserId(handle) {
 }
 
 function ActionIcon({ icon, count, active = false, activeColor = colors.accent, onPress }) {
+  const scale = useRef(new Animated.Value(1)).current;
   const color = active ? activeColor : colors.textMuted;
+
+  function handlePress(event) {
+    event.stopPropagation?.();
+    if (!onPress) {
+      return;
+    }
+
+    scale.setValue(0.88);
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 26,
+      bounciness: 7
+    }).start();
+    onPress();
+  }
+
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={(event) => {
-        event.stopPropagation?.();
-        onPress?.();
-      }}
+      onPress={handlePress}
       style={styles.action}
     >
-      <Icon
-        name={icon}
-        color={color}
-        size={17}
-        fill={active && (icon === "heart" || icon === "bookmark") ? activeColor : "none"}
-      />
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Icon
+          name={icon}
+          color={color}
+          size={17}
+          fill={active && (icon === "heart" || icon === "bookmark") ? activeColor : "none"}
+        />
+      </Animated.View>
       <Text style={[styles.actionText, active && { color }]}>{count}</Text>
     </Pressable>
   );
 }
 
 function IconAction({ icon, active = false, activeColor = colors.accent, onPress }) {
+  const scale = useRef(new Animated.Value(1)).current;
   const color = active ? activeColor : colors.textMuted;
+
+  function handlePress(event) {
+    event.stopPropagation?.();
+    if (!onPress) {
+      return;
+    }
+
+    scale.setValue(0.88);
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 26,
+      bounciness: 7
+    }).start();
+    onPress();
+  }
 
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={(event) => {
-        event.stopPropagation?.();
-        onPress?.();
-      }}
+      onPress={handlePress}
       style={styles.secondaryAction}
     >
-      <Icon
-        name={icon}
-        color={color}
-        size={16}
-        fill={active && icon === "bookmark" ? activeColor : "none"}
-        strokeWidth={2}
-      />
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Icon
+          name={icon}
+          color={color}
+          size={16}
+          fill={active && icon === "bookmark" ? activeColor : "none"}
+          strokeWidth={2}
+        />
+      </Animated.View>
     </Pressable>
   );
 }
@@ -510,6 +577,94 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: 120
   },
+  featuredSection: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: 30
+  },
+  featuredBookCard: {
+    minHeight: 216,
+    borderRadius: 30,
+    paddingVertical: spacing.lg,
+    paddingLeft: 136,
+    paddingRight: spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.046)",
+    borderWidth: 1,
+    borderColor: "rgba(240,236,228,0.1)",
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.42,
+    shadowOffset: { width: 0, height: 22 },
+    shadowRadius: 38,
+    elevation: 14,
+    overflow: "visible"
+  },
+  featuredBookCardPressed: {
+    transform: [{ scale: 0.985 }],
+    borderColor: "rgba(157,192,216,0.28)"
+  },
+  featuredRibbon: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 58,
+    borderTopLeftRadius: 30,
+    borderBottomLeftRadius: 30,
+    backgroundColor: "rgba(157,192,216,0.16)",
+    borderRightWidth: 1,
+    borderRightColor: "rgba(157,192,216,0.24)"
+  },
+  featuredCoverFloat: {
+    position: "absolute",
+    left: 22,
+    top: -10,
+    width: 112,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.5,
+    shadowOffset: { width: 0, height: 18 },
+    shadowRadius: 26,
+    elevation: 15
+  },
+  featuredCopy: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center"
+  },
+  featuredLabel: {
+    color: colors.accent,
+    fontFamily: fonts.bodyBold,
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: "uppercase",
+    marginBottom: 10
+  },
+  featuredTitle: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 27,
+    lineHeight: 29
+  },
+  featuredAuthor: {
+    color: colors.textSoft,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 17,
+    marginTop: 7
+  },
+  featuredMetaLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.md
+  },
+  featuredMetaText: {
+    color: colors.textMuted,
+    fontFamily: fonts.bodyBold,
+    fontSize: 11,
+    lineHeight: 14,
+    maxWidth: 90
+  },
   railSection: {
     marginBottom: spacing.xl
   },
@@ -548,6 +703,10 @@ const styles = StyleSheet.create({
   },
   bookItem: {
     width: 112
+  },
+  bookItemPressed: {
+    opacity: 0.78,
+    transform: [{ translateY: 1 }]
   },
   featuredBookItem: {
     width: 124

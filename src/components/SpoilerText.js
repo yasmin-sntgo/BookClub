@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { Icon } from "./Icon";
@@ -9,13 +9,19 @@ import { fonts } from "../theme/typography";
 
 export function SpoilerText({ hasSpoiler = false, numberOfLines, onReveal, revealed: controlledRevealed, style, text }) {
   const [localRevealed, setLocalRevealed] = useState(false);
+  const [revealing, setRevealing] = useState(false);
+  const overlayOpacity = useRef(new Animated.Value(1)).current;
+  const textOpacity = useRef(new Animated.Value(0.04)).current;
   const revealed = controlledRevealed ?? localRevealed;
 
   useEffect(() => {
     if (controlledRevealed === false) {
       setLocalRevealed(false);
+      setRevealing(false);
+      overlayOpacity.setValue(1);
+      textOpacity.setValue(0.04);
     }
-  }, [controlledRevealed, text]);
+  }, [controlledRevealed, overlayOpacity, text, textOpacity]);
 
   if (!hasSpoiler || revealed) {
     return (
@@ -30,28 +36,48 @@ export function SpoilerText({ hasSpoiler = false, numberOfLines, onReveal, revea
       accessibilityRole="button"
       onPress={(event) => {
         event.stopPropagation?.();
-        setLocalRevealed(true);
-        onReveal?.();
+        if (revealing) {
+          return;
+        }
+
+        setRevealing(true);
+        Animated.parallel([
+          Animated.timing(overlayOpacity, {
+            toValue: 0,
+            duration: 260,
+            useNativeDriver: true
+          }),
+          Animated.timing(textOpacity, {
+            toValue: 1,
+            duration: 260,
+            useNativeDriver: true
+          })
+        ]).start(() => {
+          setLocalRevealed(true);
+          onReveal?.();
+        });
       }}
       style={styles.wrap}
     >
-      <Text style={[style, styles.hiddenText]} numberOfLines={numberOfLines}>
+      <Animated.Text style={[style, styles.hiddenText, { opacity: textOpacity }]} numberOfLines={numberOfLines}>
         {text}
-      </Text>
-      <LinearGradient
-        colors={["rgba(14,14,14,0.98)", "rgba(31,26,21,0.96)", "rgba(17,17,17,0.98)"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.overlay}
-      >
-        <View style={styles.iconBadge}>
-          <Icon name="starOutline" color={colors.warm} size={18} strokeWidth={2.2} />
-        </View>
-        <View style={styles.copy}>
-          <Text style={styles.label}>Spoiler</Text>
-          <Text style={styles.hint}>toque para revelar a resenha</Text>
-        </View>
-      </LinearGradient>
+      </Animated.Text>
+      <Animated.View style={[styles.overlayLayer, { opacity: overlayOpacity }]}>
+        <LinearGradient
+          colors={["rgba(14,14,14,0.98)", "rgba(31,26,21,0.96)", "rgba(17,17,17,0.98)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.overlay}
+        >
+          <View style={styles.iconBadge}>
+            <Icon name="starOutline" color={colors.warm} size={18} strokeWidth={2.2} />
+          </View>
+          <View style={styles.copy}>
+            <Text style={styles.label}>Spoiler</Text>
+            <Text style={styles.hint}>toque para revelar a resenha</Text>
+          </View>
+        </LinearGradient>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -68,8 +94,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(196,145,74,0.28)"
   },
   hiddenText: {
-    opacity: 0.04,
     padding: spacing.md
+  },
+  overlayLayer: {
+    ...StyleSheet.absoluteFillObject
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

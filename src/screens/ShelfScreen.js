@@ -255,7 +255,7 @@ function FavoritesSection({ books, onBookOpen }) {
           <Pressable key={`favorite-${book.id}`} onPress={() => onBookOpen?.(book.id)} style={styles.favoriteCard}>
             <BookCover book={book} size="medium" />
             <View style={styles.favoriteInfo}>
-              <Text style={styles.favoriteLabel}>favorito</Text>
+              <Text style={styles.favoriteLabel}>queridinho</Text>
               <Text style={styles.favoriteTitle} numberOfLines={2}>{book.title}</Text>
               <Text style={styles.favoriteAuthor} numberOfLines={1}>{book.author}</Text>
             </View>
@@ -491,44 +491,49 @@ const styles = StyleSheet.create({
     gap: spacing.md
   },
   favoriteCard: {
-    width: 224,
-    minHeight: 156,
+    width: 124,
+    minHeight: 170,
     borderRadius: 22,
-    padding: spacing.md,
-    flexDirection: "row",
-    gap: spacing.md,
-    backgroundColor: "rgba(243,198,91,0.08)",
+    padding: spacing.sm,
+    paddingBottom: spacing.md,
+    alignItems: "center",
+    flexDirection: "column",
+    gap: spacing.sm,
+    backgroundColor: "rgba(196,145,74,0.075)",
     borderWidth: 1,
-    borderColor: "rgba(243,198,91,0.16)",
+    borderColor: "rgba(196,145,74,0.18)",
     shadowColor: colors.shadow,
-    shadowOpacity: 0.24,
-    shadowOffset: { width: 0, height: 12 },
-    shadowRadius: 22,
-    elevation: 7
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 18,
+    elevation: 5
   },
   favoriteInfo: {
-    flex: 1,
+    width: "100%",
     minWidth: 0,
-    justifyContent: "center"
+    justifyContent: "center",
+    alignItems: "center"
   },
   favoriteLabel: {
     ...type.label,
     color: colors.warm,
     textTransform: "uppercase",
-    marginBottom: 7
+    marginBottom: 6
   },
   favoriteTitle: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 19,
-    lineHeight: 21
+    fontSize: 17,
+    lineHeight: 19,
+    textAlign: "center"
   },
   favoriteAuthor: {
     color: colors.textSoft,
     fontFamily: fonts.body,
     fontSize: 12,
     lineHeight: 15,
-    marginTop: 4
+    marginTop: 4,
+    textAlign: "center"
   },
   bookRail: {
     paddingHorizontal: spacing.lg,

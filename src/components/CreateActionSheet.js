@@ -1,4 +1,5 @@
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
@@ -29,22 +30,64 @@ const actions = [
 ];
 
 export function CreateActionSheet({ visible, onClose }) {
+  const sheetProgress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) {
+      sheetProgress.setValue(0);
+      return;
+    }
+
+    Animated.spring(sheetProgress, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 22,
+      bounciness: 4
+    }).start();
+  }, [sheetProgress, visible]);
+
+  function selectAction(actionId) {
+    onClose(actionId);
+  }
+
+  const sheetStyle = {
+    opacity: sheetProgress,
+    transform: [
+      {
+        translateY: sheetProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [28, 0]
+        })
+      },
+      {
+        scale: sheetProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.985, 1]
+        })
+      }
+    ]
+  };
+
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, sheetStyle]}>
           <View style={styles.handle} />
 
           <View style={styles.actions}>
             {actions.map((action) => (
-              <Pressable key={action.id} onPress={() => onClose(action.id)} style={styles.action}>
+              <Pressable
+                key={action.id}
+                onPress={() => selectAction(action.id)}
+                style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
+              >
                 <Icon name={action.icon} color={colors.accent} size={24} />
                 <Text style={styles.actionTitle}>{action.title}</Text>
               </Pressable>
             ))}
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -82,7 +125,9 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: "row",
-    gap: spacing.sm
+    gap: spacing.sm,
+    position: "relative",
+    zIndex: 1
   },
   action: {
     flex: 1,
@@ -95,6 +140,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.035)",
     borderWidth: 1,
     borderColor: colors.border
+  },
+  actionPressed: {
+    transform: [{ scale: 0.96 }],
+    backgroundColor: "rgba(157,192,216,0.08)",
+    borderColor: "rgba(157,192,216,0.2)"
   },
   actionTitle: {
     color: colors.text,

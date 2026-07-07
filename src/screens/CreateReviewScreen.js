@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
@@ -20,6 +20,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
   const [text, setText] = useState("");
   const [hasSpoiler, setHasSpoiler] = useState(false);
   const [notice, setNotice] = useState("");
+  const saveTimeoutRef = useRef(null);
   const book = selectedBookId ? mockBooks.find((item) => item.id === selectedBookId) : null;
   const isReviewMode = activeMode === "review";
   const canPublish = Boolean(book && rating && (!isReviewMode || text.trim().length > 0));
@@ -39,6 +40,16 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
     return () => clearTimeout(timeout);
   }, [notice]);
 
+  useEffect(() => () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+  }, []);
+
+  function selectRating(nextRating) {
+    setRating(nextRating);
+  }
+
   function handleSave() {
     if (!book) {
       setNotice("Escolha um livro antes de continuar.");
@@ -55,13 +66,19 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
       return;
     }
 
-    onSave?.({
-      mode: activeMode,
-      bookId: book.id,
-      rating,
-      text: text.trim(),
-      hasSpoiler
-    });
+    setNotice(isReviewMode ? "Resenha publicada." : "Avaliacao salva.");
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      onSave?.({
+        mode: activeMode,
+        bookId: book.id,
+        rating,
+        text: text.trim(),
+        hasSpoiler
+      });
+    }, 520);
   }
 
   return (
@@ -119,14 +136,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
             <View style={styles.ratingRow}>
               <View style={styles.starButtons}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <Pressable key={star} onPress={() => setRating(star)} hitSlop={6}>
-                    <Icon
-                      name="star"
-                      color={rating && star <= rating ? colors.warm : "rgba(240,236,228,0.18)"}
-                      fill={rating && star <= rating ? colors.warm : "rgba(240,236,228,0.18)"}
-                      size={28}
-                    />
-                  </Pressable>
+                  <RatingButton key={star} star={star} rating={rating} onPress={() => selectRating(star)} />
                 ))}
               </View>
               <Text style={[styles.ratingNumber, !rating && styles.emptyRatingNumber]}>
@@ -146,7 +156,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
                   multiline
                   value={text}
                   onChangeText={setText}
-                  placeholder="Escreva sua resenha. O que esse livro te fez sentir? O que funcionou? O que nao funcionou?"
+                  placeholder="Escreva sua resenha."
                   placeholderTextColor={colors.textMuted}
                   textAlignVertical="top"
                   style={styles.reviewInput}
@@ -179,7 +189,6 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
               </View>
             </>
           ) : null}
-          {notice ? <Text style={styles.notice}>{notice}</Text> : null}
         </ScrollView>
 
         <BottomNav activeTab="home" onChange={onNavigate} onCreate={onCreate} />
@@ -192,8 +201,49 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
             setBookPickerOpen(false);
           }}
         />
+        {notice ? (
+          <View style={styles.noticeToast}>
+            <Text style={styles.noticeText}>{notice}</Text>
+          </View>
+        ) : null}
       </View>
     </SafeAreaView>
+  );
+}
+
+function RatingButton({ star, rating, onPress }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const active = Boolean(rating && star <= rating);
+
+  useEffect(() => {
+    if (!active) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => {
+      scale.setValue(0.82);
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 16,
+        bounciness: 6
+      }).start();
+    }, star * 58);
+
+    return () => clearTimeout(timeout);
+  }, [active, rating, scale, star]);
+
+  return (
+    <Pressable onPress={onPress} hitSlop={6}>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Icon
+          name="star"
+          color={active ? colors.warm : "rgba(240,236,228,0.18)"}
+          fill={active ? colors.warm : "rgba(240,236,228,0.18)"}
+          size={28}
+        />
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -598,15 +648,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border
   },
-  notice: {
-    color: colors.warm,
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    lineHeight: 16,
-    marginHorizontal: spacing.lg,
-    marginTop: -10,
-    marginBottom: spacing.lg
-  },
   toggleRow: {
     minHeight: 64,
     flexDirection: "row",
@@ -756,5 +797,31 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: fonts.bodyBold,
     fontSize: 13
+  },
+  noticeToast: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: 104,
+    minHeight: 52,
+    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(29,29,29,0.98)",
+    borderWidth: 1,
+    borderColor: "rgba(157,192,216,0.34)",
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.38,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 24,
+    elevation: 14
+  },
+  noticeText: {
+    color: colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    lineHeight: 18,
+    textAlign: "center"
   }
 });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
+  Animated,
   Modal,
   Platform,
   Pressable,
@@ -63,6 +64,7 @@ export function ReviewDetailScreen({
   const [reportTarget, setReportTarget] = useState(null);
   const [notice, setNotice] = useState("");
   const commentInputRef = useRef(null);
+  const saveScale = useRef(new Animated.Value(1)).current;
   const review = reviews.find((item) => item.id === reviewId) ?? reviews[0] ?? mockReviews[0];
   const book = mockBooks.find((item) => item.id === review.bookId) ?? mockBooks[0];
   const comments = useMemo(
@@ -201,18 +203,27 @@ export function ReviewDetailScreen({
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
+                  saveScale.setValue(0.88);
+                  Animated.spring(saveScale, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    speed: 26,
+                    bounciness: 7
+                  }).start();
                   onToggleSave?.(review.id);
                   setNotice(saved ? "Resenha removida dos salvos." : "Resenha salva.");
                 }}
                 style={styles.action}
               >
-                <Icon
-                  name="bookmark"
-                  color={saved ? colors.accent : colors.textMuted}
-                  fill={saved ? colors.accent : "none"}
-                  size={19}
-                  strokeWidth={2}
-                />
+                <Animated.View style={{ transform: [{ scale: saveScale }] }}>
+                  <Icon
+                    name="bookmark"
+                    color={saved ? colors.accent : colors.textMuted}
+                    fill={saved ? colors.accent : "none"}
+                    size={19}
+                    strokeWidth={2}
+                  />
+                </Animated.View>
                 <Text style={[styles.actionText, saved && { color: colors.accent }]}>
                   {saved ? "salva" : "salvar"}
                 </Text>
@@ -389,6 +400,19 @@ function AuthorLine({ review, onUserOpen }) {
 
 function CommentCard({ comment, liked, likes, onLike, onMenu, onReply, onUserOpen }) {
   const userId = findUserId(comment.handle);
+  const likeScale = useRef(new Animated.Value(1)).current;
+
+  function handleLike(event) {
+    event.stopPropagation?.();
+    likeScale.setValue(0.88);
+    Animated.spring(likeScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 26,
+      bounciness: 7
+    }).start();
+    onLike?.();
+  }
 
   return (
     <View style={styles.commentCard}>
@@ -415,18 +439,17 @@ function CommentCard({ comment, liked, likes, onLike, onMenu, onReply, onUserOpe
       <View style={styles.commentActions}>
         <Pressable
           accessibilityRole="button"
-          onPress={(event) => {
-            event.stopPropagation?.();
-            onLike?.();
-          }}
+          onPress={handleLike}
           style={styles.commentLike}
         >
-          <Icon
-            name="heart"
-            color={liked ? "#d96060" : colors.textMuted}
-            fill={liked ? "#d96060" : "none"}
-            size={16}
-          />
+          <Animated.View style={{ transform: [{ scale: likeScale }] }}>
+            <Icon
+              name="heart"
+              color={liked ? "#d96060" : colors.textMuted}
+              fill={liked ? "#d96060" : "none"}
+              size={16}
+            />
+          </Animated.View>
           <Text style={[styles.commentLikeText, !liked && styles.commentLikeMuted]}>
             {likes}
           </Text>
@@ -449,15 +472,35 @@ function findUserId(handle) {
 }
 
 function ActionIcon({ icon, count, active = false, activeColor = colors.accent, onPress }) {
+  const scale = useRef(new Animated.Value(1)).current;
   const color = active ? activeColor : colors.textMuted;
+
+  function handlePress(event) {
+    event.stopPropagation?.();
+    if (!onPress) {
+      return;
+    }
+
+    scale.setValue(0.88);
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 26,
+      bounciness: 7
+    }).start();
+    onPress();
+  }
+
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.action}>
-      <Icon
-        name={icon}
-        color={color}
-        size={20}
-        fill={active && icon === "heart" ? activeColor : "none"}
-      />
+    <Pressable accessibilityRole="button" onPress={handlePress} style={styles.action}>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Icon
+          name={icon}
+          color={color}
+          size={20}
+          fill={active && icon === "heart" ? activeColor : "none"}
+        />
+      </Animated.View>
       <Text style={[styles.actionText, active && { color }]}>{count}</Text>
     </Pressable>
   );

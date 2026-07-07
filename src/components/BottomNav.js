@@ -22,7 +22,11 @@ export function BottomNav({ activeTab = "home", onChange, onCreate }) {
           onPress={() => onChange?.(item.id)}
         />
       ))}
-      <Pressable accessibilityRole="button" onPress={onCreate} style={styles.addButton}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onCreate}
+        style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}
+      >
         <Icon name="plus" size={24} color={colors.ink} strokeWidth={2.6} />
       </Pressable>
       {items.slice(2).map((item) => (
@@ -85,16 +89,19 @@ const styles = StyleSheet.create({
     color: colors.text
   },
   addButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 18,
+    width: 52,
+    height: 52,
+    borderRadius: 19,
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.accent,
-    shadowOpacity: 0.32,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 20,
-    elevation: 10
+    shadowOpacity: 0.42,
+    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 24,
+    elevation: 12
+  },
+  addButtonPressed: {
+    transform: [{ scale: 0.94 }]
   }
 });

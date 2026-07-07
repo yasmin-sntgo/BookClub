@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
@@ -16,6 +16,7 @@ const statusOptions = [
   { id: "abandoned", title: "Abandonado", description: "parou e quer registrar" }
 ];
 const mockBooks = getBooks();
+const favoriteColor = colors.warm;
 
 export function AddToShelfScreen({
   initialBookId = null,
@@ -33,6 +34,12 @@ export function AddToShelfScreen({
   const [status, setStatus] = useState("want");
   const [favorite, setFavorite] = useState(false);
   const [query, setQuery] = useState("");
+  const [notice, setNotice] = useState("");
+  const saveTimeoutRef = useRef(null);
+  const favoriteScale = useRef(new Animated.Value(1)).current;
+  const statusAnimations = useRef(
+    Object.fromEntries(statusOptions.map((option) => [option.id, new Animated.Value(option.id === "want" ? 1 : 0)]))
+  ).current;
   const selectedBook = mockBooks.find((book) => book.id === selectedBookId) ?? mockBooks[0];
   const currentEntry = shelfEntries.find((entry) => entry.bookId === selectedBook?.id);
 
@@ -44,6 +51,23 @@ export function AddToShelfScreen({
     setStatus(nextEntry?.status ?? "want");
     setFavorite(Boolean(nextEntry?.favorite));
   }, [fallbackBookId, shelfEntries]);
+
+  useEffect(() => {
+    statusOptions.forEach((option) => {
+      Animated.spring(statusAnimations[option.id], {
+        toValue: status === option.id ? 1 : 0,
+        useNativeDriver: true,
+        speed: 22,
+        bounciness: 5
+      }).start();
+    });
+  }, [status, statusAnimations]);
+
+  useEffect(() => () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+  }, []);
 
   const filteredBooks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -65,16 +89,37 @@ export function AddToShelfScreen({
     setFavorite(Boolean(nextEntry?.favorite));
   }
 
+  function selectStatus(nextStatus) {
+    setStatus(nextStatus);
+  }
+
+  function toggleFavorite() {
+    setFavorite((current) => !current);
+    favoriteScale.setValue(0.92);
+    Animated.spring(favoriteScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 24,
+      bounciness: 7
+    }).start();
+  }
+
   function saveEntry() {
     if (!selectedBook) {
       return;
     }
 
-    onSave?.({
-      bookId: selectedBook.id,
-      status,
-      favorite
-    });
+    setNotice(currentEntry ? "Estante atualizada." : "Livro salvo na estante.");
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      onSave?.({
+        bookId: selectedBook.id,
+        status,
+        favorite
+      });
+    }, 520);
   }
 
   return (
@@ -148,32 +193,41 @@ export function AddToShelfScreen({
 
           <Text style={styles.sectionLabel}>Como marcar</Text>
           <View style={styles.statusGrid}>
-            {statusOptions.map((option) => (
-              <Pressable
-                key={option.id}
-                onPress={() => setStatus(option.id)}
-                style={[styles.statusCard, status === option.id && styles.activeStatusCard]}
-              >
-                <Text style={[styles.statusTitle, status === option.id && styles.activeStatusTitle]}>
-                  {option.title}
-                </Text>
-                <Text style={styles.statusDescription}>{option.description}</Text>
-              </Pressable>
-            ))}
+            {statusOptions.map((option) => {
+              const active = status === option.id;
+              const scale = statusAnimations[option.id].interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.025]
+              });
+
+              return (
+                <Animated.View key={option.id} style={[styles.statusCardWrap, { transform: [{ scale }] }]}>
+                  <Pressable
+                    onPress={() => selectStatus(option.id)}
+                    style={[styles.statusCard, active && styles.activeStatusCard]}
+                  >
+                    <Text style={[styles.statusTitle, active && styles.activeStatusTitle]}>
+                      {option.title}
+                    </Text>
+                    <Text style={styles.statusDescription}>{option.description}</Text>
+                  </Pressable>
+                </Animated.View>
+              );
+            })}
           </View>
 
           <Pressable
-            onPress={() => setFavorite((current) => !current)}
+            onPress={toggleFavorite}
             style={[styles.favoriteRow, favorite && styles.favoriteRowActive]}
           >
-            <View style={styles.favoriteIcon}>
+            <Animated.View style={[styles.favoriteIcon, { transform: [{ scale: favoriteScale }] }]}>
               <Icon
                 name="heart"
-                color={favorite ? colors.warm : colors.textSoft}
-                fill={favorite ? colors.warm : "none"}
+                color={favorite ? favoriteColor : colors.textSoft}
+                fill={favorite ? favoriteColor : "none"}
                 size={22}
               />
-            </View>
+            </Animated.View>
             <View style={styles.favoriteCopy}>
               <Text style={styles.favoriteTitle}>Favorito</Text>
               <Text style={styles.favoriteText}>tambem aparece na area de favoritos da Estante</Text>
@@ -186,6 +240,11 @@ export function AddToShelfScreen({
         </ScrollView>
 
         <BottomNav activeTab="library" onChange={onNavigate} onCreate={onCreate} />
+        {notice ? (
+          <View style={styles.noticeToast}>
+            <Text style={styles.noticeText}>{notice}</Text>
+          </View>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -397,8 +456,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.lg
   },
-  statusCard: {
+  statusCardWrap: {
     width: "48.5%",
+    minHeight: 86
+  },
+  statusCard: {
+    flex: 1,
     minHeight: 86,
     borderRadius: 20,
     padding: spacing.md,
@@ -441,8 +504,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border
   },
   favoriteRowActive: {
-    backgroundColor: "rgba(196,145,74,0.1)",
-    borderColor: "rgba(196,145,74,0.22)"
+    backgroundColor: "rgba(196,145,74,0.075)",
+    borderColor: "rgba(196,145,74,0.18)"
   },
   favoriteIcon: {
     width: 42,
@@ -484,5 +547,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 1.4,
     textTransform: "uppercase"
+  },
+  noticeToast: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: 104,
+    minHeight: 52,
+    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(29,29,29,0.98)",
+    borderWidth: 1,
+    borderColor: "rgba(157,192,216,0.34)",
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.38,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 24,
+    elevation: 14
+  },
+  noticeText: {
+    color: colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    lineHeight: 18,
+    textAlign: "center"
   }
 });
