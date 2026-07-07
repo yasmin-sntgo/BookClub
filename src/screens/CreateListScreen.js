@@ -1,31 +1,31 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { mockBooks } from "../data/mockFeed";
+import { getBooks } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
 
 const listCategories = [
   { id: "classicos", label: "Classicos" },
-  { id: "chorar", label: "Chorar" },
+  { id: "tristes", label: "Tristes" },
   { id: "ficcao cientifica", label: "Ficcao cientifica" },
   { id: "terror", label: "Terror" },
   { id: "fantasia", label: "Fantasia" },
   { id: "nacionais", label: "Nacionais" }
 ];
+const mockBooks = getBooks();
 
-export function CreateListScreen({ onBack, onCreate, onNavigate, onSave }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [creatorNote, setCreatorNote] = useState("");
-  const [category, setCategory] = useState("classicos");
-  const [ordered, setOrdered] = useState(true);
-  const [privateList, setPrivateList] = useState(false);
-  const [selectedBookIds, setSelectedBookIds] = useState(["dune", "hobbit", "foundation"]);
+export function CreateListScreen({ list = null, onBack, onCreate, onNavigate, onSave }) {
+  const [title, setTitle] = useState(list?.title ?? "");
+  const [description, setDescription] = useState(list?.description ?? "");
+  const [category, setCategory] = useState(list?.tag ?? "classicos");
+  const [ordered, setOrdered] = useState(list?.ordered ?? true);
+  const [privateList, setPrivateList] = useState(Boolean(list?.private));
+  const [selectedBookIds, setSelectedBookIds] = useState(list?.bookIds ?? []);
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
@@ -43,6 +43,26 @@ export function CreateListScreen({ onBack, onCreate, onNavigate, onSave }) {
   }, [normalizedQuery]);
   const canSave = title.trim().length > 0 && selectedBookIds.length > 0;
 
+  useEffect(() => {
+    setTitle(list?.title ?? "");
+    setDescription(list?.description ?? "");
+    setCategory(list?.tag ?? "classicos");
+    setOrdered(list?.ordered ?? true);
+    setPrivateList(Boolean(list?.private));
+    setSelectedBookIds(list?.bookIds ?? []);
+    setQuery("");
+    setNotice("");
+  }, [list]);
+
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => setNotice(""), 2200);
+    return () => clearTimeout(timeout);
+  }, [notice]);
+
   function toggleBook(bookId) {
     setSelectedBookIds((current) =>
       current.includes(bookId) ? current.filter((id) => id !== bookId) : [...current, bookId]
@@ -56,9 +76,9 @@ export function CreateListScreen({ onBack, onCreate, onNavigate, onSave }) {
     }
 
     onSave?.({
+      id: list?.id,
       title: title.trim(),
       description: description.trim(),
-      creatorNote: creatorNote.trim(),
       tag: category,
       ordered,
       private: privateList,
@@ -74,15 +94,15 @@ export function CreateListScreen({ onBack, onCreate, onNavigate, onSave }) {
             <Icon name="back" color={colors.textSoft} size={24} strokeWidth={2.4} />
           </Pressable>
           <View style={styles.headerCopy}>
-            <Text style={styles.title}>Criar lista</Text>
-            <Text style={styles.subtitle}>monte sua curadoria</Text>
+            <Text style={styles.title}>{list ? "Editar lista" : "Criar lista"}</Text>
+            <Text style={styles.subtitle}>{list ? "ajuste sua curadoria" : "monte sua curadoria"}</Text>
           </View>
           <Pressable
             accessibilityRole="button"
             onPress={saveList}
             style={[styles.publishButton, !canSave && styles.disabledButton]}
           >
-            <Text style={[styles.publishText, !canSave && styles.disabledText]}>Salvar</Text>
+            <Text style={[styles.publishText, !canSave && styles.disabledText]}>{list ? "Salvar" : "Criar"}</Text>
           </Pressable>
         </View>
 
@@ -134,7 +154,7 @@ export function CreateListScreen({ onBack, onCreate, onNavigate, onSave }) {
             />
             <ToggleRow
               title="Lista privada"
-              description="aparece so em Suas listas neste prototipo"
+              description="fica visivel apenas para voce"
               value={privateList}
               onPress={() => setPrivateList((current) => !current)}
             />
@@ -179,7 +199,7 @@ export function CreateListScreen({ onBack, onCreate, onNavigate, onSave }) {
           </View>
 
           <View style={styles.bookList}>
-            {filteredBooks.map((book) => {
+            {filteredBooks.length > 0 ? filteredBooks.map((book) => {
               const selected = selectedBookIds.includes(book.id);
 
               return (
@@ -199,20 +219,12 @@ export function CreateListScreen({ onBack, onCreate, onNavigate, onSave }) {
                   </View>
                 </Pressable>
               );
-            })}
-          </View>
-
-          <SectionLabel title="Nota do criador" />
-          <View style={styles.noteCard}>
-            <TextInput
-              multiline
-              value={creatorNote}
-              onChangeText={setCreatorNote}
-              placeholder="Opcional: explique por que essa lista existe."
-              placeholderTextColor={colors.textMuted}
-              textAlignVertical="top"
-              style={styles.noteInput}
-            />
+            }) : (
+              <View style={styles.emptySearchCard}>
+                <Text style={styles.emptySearchTitle}>Nenhum livro encontrado</Text>
+                <Text style={styles.emptySearchText}>Tente buscar por titulo, autor ou genero.</Text>
+              </View>
+            )}
           </View>
 
           {notice ? <Text style={styles.notice}>{notice}</Text> : null}
@@ -545,6 +557,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentWash,
     borderColor: "rgba(157,192,216,0.24)"
   },
+  emptySearchCard: {
+    minHeight: 92,
+    borderRadius: 18,
+    padding: spacing.md,
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.035)",
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  emptySearchTitle: {
+    color: colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    lineHeight: 18
+  },
+  emptySearchText: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4
+  },
   bookCopy: {
     flex: 1,
     minWidth: 0
@@ -574,23 +608,6 @@ const styles = StyleSheet.create({
   checkDotActive: {
     borderColor: colors.accent,
     backgroundColor: colors.accent
-  },
-  noteCard: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.045)",
-    borderWidth: 1,
-    borderColor: colors.border
-  },
-  noteInput: {
-    minHeight: 92,
-    color: "#d1c8b8",
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 20,
-    padding: 0
   },
   notice: {
     color: colors.warm,

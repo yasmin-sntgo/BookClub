@@ -6,7 +6,7 @@ Fluxo inicial de login, cadastro e feed em React Native usando Expo.
 
 ```txt
 src/
-  components/   pecas reutilizaveis, como botao, campo, card, logo e tentaculos
+  components/   pecas reutilizaveis, como botao, campo, card, logo e icones
   hooks/        carregamento das fontes do app
   navigation/   ponto onde as telas vao ser conectadas depois
   data/         dados falsos usados para desenhar o feed antes da API real
@@ -23,8 +23,6 @@ Para mudar a identidade visual sem quebrar a tela inteira:
 - Tela de cadastro: `src/screens/RegisterScreen.js`
 - Tela Home/Feed: `src/screens/HomeScreen.js`
 - Dados falsos do feed: `src/data/mockFeed.js`
-- Tentaculos animados: `src/components/MascotTentacles.js`
-- Imagem do mascote: `assets/mascot-tentacles.png`
 
 ## Como rodar no seu computador
 

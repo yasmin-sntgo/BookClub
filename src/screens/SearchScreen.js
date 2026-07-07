@@ -4,12 +4,14 @@ import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { mockBooks, mockUsers } from "../data/mockFeed";
+import { getBooks, getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
 const tabs = ["Livros", "Usuarios", "Listas"];
+const mockBooks = getBooks();
+const mockUsers = getUsers();
 
 const genres = [
   { name: "Fantasia", detail: "dragoes, magia, jornadas" },
@@ -93,12 +95,15 @@ export function SearchScreen({
   );
 
   const filteredLists = useMemo(
-    () =>
-      normalizedQuery
-        ? lists.filter((list) =>
+    () => {
+      const visibleLists = lists.filter((list) => !list.private);
+
+      return normalizedQuery
+        ? visibleLists.filter((list) =>
             `${list.title} ${list.creator} ${list.handle} ${list.description} ${list.tag}`.toLowerCase().includes(normalizedQuery)
           )
-        : lists,
+        : visibleLists;
+    },
     [lists, normalizedQuery]
   );
 
@@ -222,6 +227,7 @@ function BooksSearch({
             </Pressable>
           ))}
         </View>
+        {visibleBooks.length === 0 ? <EmptyResults text="Nenhum livro encontrado." /> : null}
       </View>
     </>
   );
@@ -238,12 +244,14 @@ function UsersSearch({ followedUserIds, users, onToggleFollow, onUserOpen }) {
             avatar={user.avatar}
             title={user.name}
             subtitle={`${user.handle} - ${user.bio}`}
-            action={followedUserIds.includes(user.id) ? "Seguindo" : "Seguir"}
+            action={user.id === "yasmin" ? "Voce" : followedUserIds.includes(user.id) ? "Seguindo" : "Seguir"}
             activeAction={followedUserIds.includes(user.id)}
-            onAction={() => onToggleFollow?.(user.id)}
+            disabledAction={user.id === "yasmin"}
+            onAction={() => user.id !== "yasmin" && onToggleFollow?.(user.id)}
             onPress={() => onUserOpen?.(user.id)}
           />
         ))}
+        {users.length === 0 ? <EmptyResults text="Nenhum usuario encontrado." /> : null}
       </View>
     </View>
   );
@@ -265,6 +273,7 @@ function ListsSearch({ lists, booksById, onBookOpen, onListOpen, onToggleListSav
             saved={savedListIds.includes(list.id)}
           />
         ))}
+        {lists.length === 0 ? <EmptyResults text="Nenhuma lista encontrada." /> : null}
       </View>
     </View>
   );
@@ -278,7 +287,10 @@ function ListResult({ list, books, saved, onBookOpen, onListOpen, onToggleListSa
           <Pressable
             accessibilityRole="button"
             key={`${list.id}-${book.id}`}
-            onPress={() => onBookOpen?.(book.id)}
+            onPress={(event) => {
+              event.stopPropagation?.();
+              onBookOpen?.(book.id);
+            }}
             style={[styles.listMiniCover, { left: index * 18, zIndex: 4 - index }]}
           >
             <BookCover book={book} size="small" />
@@ -305,7 +317,7 @@ function ListResult({ list, books, saved, onBookOpen, onListOpen, onToggleListSa
   );
 }
 
-function ResultRow({ avatar, title, subtitle, action, activeAction = false, onAction, onPress }) {
+function ResultRow({ avatar, title, subtitle, action, activeAction = false, disabledAction = false, onAction, onPress }) {
   return (
     <Pressable onPress={onPress} style={styles.resultRow}>
       <View style={styles.avatar}>
@@ -317,15 +329,24 @@ function ResultRow({ avatar, title, subtitle, action, activeAction = false, onAc
       </View>
       <Pressable
         accessibilityRole="button"
+        disabled={disabledAction}
         onPress={(event) => {
           event.stopPropagation?.();
           onAction?.();
         }}
-        style={[styles.miniButton, activeAction && styles.miniButtonActive]}
+        style={[styles.miniButton, activeAction && styles.miniButtonActive, disabledAction && styles.miniButtonDisabled]}
       >
-        <Text style={[styles.miniButtonText, activeAction && styles.miniButtonTextActive]}>{action}</Text>
+        <Text style={[styles.miniButtonText, activeAction && styles.miniButtonTextActive, disabledAction && styles.miniButtonTextDisabled]}>{action}</Text>
       </Pressable>
     </Pressable>
+  );
+}
+
+function EmptyResults({ text }) {
+  return (
+    <View style={styles.emptyResults}>
+      <Text style={styles.emptyResultsText}>{text}</Text>
+    </View>
   );
 }
 
@@ -496,7 +517,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
+    columnGap: 12,
     rowGap: 18
   },
   bookItem: {
@@ -597,6 +619,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.05)",
     borderColor: colors.border
   },
+  miniButtonDisabled: {
+    backgroundColor: "rgba(255,255,255,0.025)",
+    borderColor: "rgba(240,236,228,0.08)"
+  },
   miniButtonText: {
     color: colors.text,
     fontFamily: fonts.bodyBold,
@@ -604,5 +630,26 @@ const styles = StyleSheet.create({
   },
   miniButtonTextActive: {
     color: colors.textSoft
+  },
+  miniButtonTextDisabled: {
+    color: colors.textMuted
+  },
+  emptyResults: {
+    minHeight: 92,
+    marginHorizontal: spacing.lg,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.035)",
+    padding: spacing.md
+  },
+  emptyResultsText: {
+    color: colors.textMuted,
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center"
   }
 });

@@ -4,10 +4,26 @@
 - `AppNavigator.js` controla qual tela aparece.
 - A pasta `screens` tem as telas completas.
 - A pasta `components` tem partes menores que usamos em varias telas, partes reutilizaaveis.
-- A pasta `data` tem os dados falsos que estamos usando por enquanto.
+- A pasta `hooks` guarda regras de estado reutilizaveis, como estante, resenhas, avaliacoes, comentarios, listas, perfil e notificacoes.
+- A pasta `data` tem os dados falsos que estamos usando por enquanto, separados por assunto: livros, resenhas, comentarios, usuarios, listas e notificacoes.
+- A pasta `services` e a ponte entre o app e os dados. Hoje ela entrega os mocks por funcoes, mas depois pode chamar API ou banco sem obrigar as telas a mudarem.
 - A pasta `theme` guarda cores, fontes, espacamentos e estilos gerais.
 
-Por enquanto o app ainda nao esta ligado a banco de dados nem API. Entao os livros, listas, resenhas e comentarios que aparecem estao vindo de um arquivo com dados falsos.
+Por enquanto o app ainda nao esta ligado a banco de dados nem API. Entao os livros, listas, resenhas e comentarios que aparecem ainda estao vindo dos mocks, mas as telas agora acessam esses dados pela camada de `services`.
+
+Exemplos de funcoes dessa camada:
+
+- `getBooks()`
+- `getBookById(id)`
+- `getPopularBooks()`
+- `getBooksByGenre(genero)`
+- `searchBooks(texto)`
+- `getReviews()`
+- `getCommentsByReviewId(id)`
+- `getUsers()`
+- `searchUsers(texto)`
+- `getLists()`
+- `searchLists(texto)`
 
 ## Onde o app comeca
 
@@ -259,12 +275,6 @@ Controla as abas da Home:
 - Livros;
 - Resenhas.
 
-### `MascotTentacles.js`
-
-E o componente dos tentaculos do mascote.
-
-Ele aparece nas telas iniciais. Futuramente tem que melhorar a animacao dos tentaculos para cada um se mexer de forma independente.
-
 ### `AppButton.js` e `AppInput.js`
 
 Sao componentes padrao de botao e campo de texto.
@@ -336,13 +346,35 @@ Ajuda a manter margens e distancias parecidas entre as telas.
 
 Guarda sombras usadas em cards e elementos visuais.
 
-## Fonte do app
+## Hooks do app
 
-### `src/hooks/useAppFonts.js`
+### `src/hooks/useShelf.js`
 
-Esse arquivo carrega as fontes do app.
+Esse hook cuida da estante: livros marcados, favoritos e privacidade da estante.
 
-Se alguma fonte nao aparecer direito, pode ser por causa dele.
+### `src/hooks/useReviews.js`
+
+Esse hook cuida de resenhas, avaliacoes, comentarios, curtidas, salvos, spoiler revelado, edicao e exclusao.
+
+Ele nao decide para qual tela o app vai. Essa parte continua no `AppNavigator`.
+
+### `src/hooks/useLists.js`
+
+Esse hook cuida das listas: listas criadas, listas salvas, edicao, exclusao e privacidade.
+
+Ele devolve uma API mais limpa para o `AppNavigator`, como `lists`, `createList`, `editList`, `deleteList` e `toggleListSave`.
+
+### `src/hooks/useProfile.js`
+
+Esse hook cuida do perfil atual, da conta cadastrada no prototipo e de seguir ou deixar de seguir usuarios.
+
+Ele tambem entrega o `currentUserHandle`, usado quando o app cria resenhas, avaliacoes e listas com o usuario atual.
+
+### `src/hooks/useNotifications.js`
+
+Esse hook cuida das notificacoes: lista filtrada, notificacoes lidas, contador de nao lidas e preferencias.
+
+Assim o `AppNavigator` nao precisa saber como calcular notificacoes sociais ou notificacoes de livros/listas.
 
 ## Imagens e arquivos visuais
 
@@ -350,7 +382,7 @@ Se alguma fonte nao aparecer direito, pode ser por causa dele.
 
 Essa pasta guarda imagens e arquivos visuais.
 
-Aqui fica, por exemplo, a imagem dos tentaculos do mascote.
+Aqui ficam, por exemplo, icones e imagens usados pelo app.
 
 ## Arquivos que a gente mais deve mexer
 

@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Pressable, SafeAreaView, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { mockBooks, mockLists } from "../data/mockFeed";
+import { TextFeedbackSheet } from "../components/TextFeedbackSheet";
+import { getBooks, getLists } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
+
+const mockBooks = getBooks();
+const mockLists = getLists();
 
 export function ListDetailScreen({
   listId,
@@ -16,11 +20,15 @@ export function ListDetailScreen({
   onBack,
   onBookOpen,
   onCreate,
+  onDelete,
+  onEdit,
   onNavigate,
+  onPrivacyChange,
   onToggleSave
 }) {
   const list = lists.find((item) => item.id === listId) || lists[0] || mockLists[0];
   const [menuVisible, setMenuVisible] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [privateList, setPrivateList] = useState(Boolean(list.private));
   const [menuNotice, setMenuNotice] = useState("");
   const booksById = Object.fromEntries(mockBooks.map((book) => [book.id, book]));
@@ -28,30 +36,54 @@ export function ListDetailScreen({
   const owner = list.creator === "Yasmin";
   const listLink = `bookclub://listas/${list.id}`;
 
+  useEffect(() => {
+    if (!menuNotice) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => setMenuNotice(""), 2200);
+    return () => clearTimeout(timeout);
+  }, [menuNotice]);
+
   async function handleMenuAction(action) {
     setMenuVisible(false);
 
-    if (action === "Editar lista") {
-      setMenuNotice("Edicao da lista vai abrir aqui quando criarmos essa tela.");
-      return;
-    }
-
     if (action === "Tornar privada" || action === "Tornar publica") {
-      setPrivateList((current) => !current);
+      const nextPrivate = !privateList;
+      setPrivateList(nextPrivate);
+      onPrivacyChange?.(list.id, nextPrivate);
       setMenuNotice(action === "Tornar privada" ? "Lista marcada como privada." : "Lista marcada como publica.");
       return;
     }
 
-    if (action === "Excluir lista") {
-      setMenuNotice("Excluir lista vai pedir confirmacao antes de apagar.");
+    if (action === "Editar lista") {
+      onEdit?.(list.id);
+      setMenuNotice("Edicao de lista sera aberta aqui.");
+      return;
+    }
+
+    if (action === "Apagar lista") {
+      onDelete?.(list.id);
       return;
     }
 
     if (action === "Compartilhar") {
       try {
-        await Share.share({ message: `${list.title} - ${listLink}` });
+        const result = await Share.share({ message: `${list.title} - ${listLink}` });
+
+        if (result?.action === Share.dismissedAction) {
+          setMenuNotice("Compartilhamento cancelado.");
+          return;
+        }
       } catch (error) {
-        // O compartilhamento nativo pode nao existir no navegador, mas funciona no celular.
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(listLink);
+          setMenuNotice("Compartilhamento indisponivel. Link copiado.");
+          return;
+        }
+
+        setMenuNotice(`Link da lista: ${listLink}`);
+        return;
       }
       setMenuNotice("Lista pronta para compartilhar.");
       return;
@@ -68,7 +100,7 @@ export function ListDetailScreen({
     }
 
     if (action === "Denunciar lista") {
-      setMenuNotice("Denuncia registrada neste exemplo. Depois ligamos isso ao suporte.");
+      setReportOpen(true);
     }
   }
 
@@ -104,12 +136,21 @@ export function ListDetailScreen({
             </View>
 
             <Text style={styles.description} numberOfLines={2}>{list.description}</Text>
+            {privateList ? (
+              <View style={styles.privateBadge}>
+                <Icon name="lock" color={colors.accent} size={14} strokeWidth={2.1} />
+                <Text style={styles.privateBadgeText}>lista privada: somente voce ve esta lista</Text>
+              </View>
+            ) : null}
             <Text style={styles.listMeta}>{list.booksCount} livros - {list.saves} salvos - {list.updatedAt}</Text>
 
             <View style={styles.actions}>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => onToggleSave?.(list.id)}
+                onPress={() => {
+                  onToggleSave?.(list.id);
+                  setMenuNotice(saved ? "Lista removida dos salvos." : "Lista salva.");
+                }}
                 style={[styles.actionButton, saved ? styles.savedAction : styles.primaryAction]}
               >
                 <Icon name="bookmark" color={saved ? colors.text : colors.ink} size={17} strokeWidth={2.2} />
@@ -122,14 +163,9 @@ export function ListDetailScreen({
                 <Text style={styles.actionText}>Compartilhar</Text>
               </Pressable>
             </View>
-            {menuNotice ? <Text style={styles.menuNotice}>{menuNotice}</Text> : null}
           </View>
 
           <View style={styles.section}>
-            <SectionHeader
-              title="Livros"
-              action={list.ordered ? "ordem do criador" : `${list.booksCount} livros`}
-            />
             {list.ordered ? (
               <View style={styles.bookList}>
                 {books.map((book, index) => (
@@ -169,6 +205,23 @@ export function ListDetailScreen({
           onAction={handleMenuAction}
           onClose={() => setMenuVisible(false)}
         />
+        <TextFeedbackSheet
+          visible={reportOpen}
+          title="Denunciar lista"
+          description="Explique o problema encontrado nesta lista."
+          placeholder="Descreva o motivo da denuncia..."
+          submitLabel="Registrar"
+          onClose={() => setReportOpen(false)}
+          onSubmit={() => {
+            setReportOpen(false);
+            setMenuNotice("Denuncia registrada.");
+          }}
+        />
+        {menuNotice ? (
+          <View style={styles.noticeToast}>
+            <Text style={styles.noticeText}>{menuNotice}</Text>
+          </View>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -176,9 +229,9 @@ export function ListDetailScreen({
 
 function ListMenu({ owner, privateList, visible, onAction, onClose }) {
   const ownerActions = owner
-    ? ["Editar lista", privateList ? "Tornar publica" : "Tornar privada", "Excluir lista"]
+    ? ["Editar lista", privateList ? "Tornar publica" : "Tornar privada", "Apagar lista"]
     : [];
-  const actions = [...ownerActions, "Compartilhar", "Copiar link", "Denunciar lista"];
+  const actions = [...ownerActions, "Compartilhar", "Copiar link", ...(!owner ? ["Denunciar lista"] : [])];
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
@@ -195,7 +248,7 @@ function ListMenu({ owner, privateList, visible, onAction, onClose }) {
                 onPress={() => onAction?.(action)}
                 style={styles.menuAction}
               >
-                <Text style={[styles.menuActionText, action === "Excluir lista" && styles.dangerText]}>
+                <Text style={[styles.menuActionText, action === "Apagar lista" && styles.menuActionDanger]}>
                   {action}
                 </Text>
               </Pressable>
@@ -356,6 +409,25 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: spacing.sm
   },
+  privateBadge: {
+    alignSelf: "flex-start",
+    minHeight: 30,
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    marginTop: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.accentWash,
+    borderWidth: 1,
+    borderColor: "rgba(157,192,216,0.22)"
+  },
+  privateBadgeText: {
+    color: colors.textSoft,
+    fontFamily: fonts.bodyBold,
+    fontSize: 11,
+    lineHeight: 14
+  },
   actions: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -390,20 +462,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: fonts.bodyBold,
     fontSize: 12
-  },
-  menuNotice: {
-    alignSelf: "flex-start",
-    color: colors.text,
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: spacing.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 13,
-    backgroundColor: "rgba(157,192,216,0.13)",
-    borderWidth: 1,
-    borderColor: "rgba(157,192,216,0.25)"
   },
   section: {
     marginBottom: spacing.lg
@@ -542,7 +600,33 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 14
   },
-  dangerText: {
+  menuActionDanger: {
     color: "#d96060"
+  },
+  noticeToast: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: 104,
+    minHeight: 52,
+    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(29,29,29,0.98)",
+    borderWidth: 1,
+    borderColor: "rgba(157,192,216,0.34)",
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.38,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 24,
+    elevation: 14
+  },
+  noticeText: {
+    color: colors.text,
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    lineHeight: 18,
+    textAlign: "center"
   }
 });

@@ -14,7 +14,6 @@ import { AppInput } from "../components/AppInput";
 import { AuthCard } from "../components/AuthCard";
 import { BackgroundGlow } from "../components/BackgroundGlow";
 import { BrandLogo } from "../components/BrandLogo";
-import { MascotTentacles } from "../components/MascotTentacles";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { type } from "../theme/typography";
@@ -28,7 +27,6 @@ export function RegisterScreen({ onCreateAccount, onLogin }) {
   return (
     <SafeAreaView style={styles.safe}>
       <BackgroundGlow />
-      <MascotTentacles />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboard}
@@ -71,7 +69,12 @@ export function RegisterScreen({ onCreateAccount, onLogin }) {
               placeholder="********"
             />
 
-            <AppButton onPress={onCreateAccount} style={styles.createButton}>Criar conta</AppButton>
+            <AppButton
+              onPress={() => onCreateAccount?.({ name, email, username, password })}
+              style={styles.createButton}
+            >
+              Criar conta
+            </AppButton>
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />

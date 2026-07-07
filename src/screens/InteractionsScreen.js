@@ -1,19 +1,24 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { mockBooks, mockComments, mockLists, mockReviews } from "../data/mockFeed";
+import { getBooks, getComments, getLists, getReviews } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
 const tabs = ["Curtidas", "Comentarios", "Salvos"];
 const currentUserHandle = "@yasmin_le";
+const mockBooks = getBooks();
+const mockComments = getComments();
+const mockLists = getLists();
+const mockReviews = getReviews();
 
 export function InteractionsScreen({
   comments = mockComments,
+  initialTab = "Curtidas",
   likedCommentIds = [],
   likedReviewIds = [],
   lists = mockLists,
@@ -25,9 +30,10 @@ export function InteractionsScreen({
   onCreate,
   onListOpen,
   onNavigate,
-  onReviewOpen
+  onReviewOpen,
+  onTabChange
 }) {
-  const [activeTab, setActiveTab] = useState("Curtidas");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const booksById = useMemo(
     () => Object.fromEntries(mockBooks.map((book) => [book.id, book])),
     []
@@ -93,6 +99,15 @@ export function InteractionsScreen({
     }))
   ];
 
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
+  function selectTab(tab) {
+    setActiveTab(tab);
+    onTabChange?.(tab);
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.shell}>
@@ -109,7 +124,7 @@ export function InteractionsScreen({
             <Pressable
               key={tab}
               accessibilityRole="button"
-              onPress={() => setActiveTab(tab)}
+              onPress={() => selectTab(tab)}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>

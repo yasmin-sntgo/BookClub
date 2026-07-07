@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BottomNav } from "../components/BottomNav";
@@ -8,18 +8,35 @@ import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
 export function SettingsScreen({
+  notificationPreferences = { social: true, books: true },
   onBack,
   onCreate,
   onNavigate,
+  onNotificationPreferenceChange,
   onShelfPrivacyChange,
   shelfPrivate = false
 }) {
   const [notice, setNotice] = useState("");
 
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => setNotice(""), 2200);
+    return () => clearTimeout(timeout);
+  }, [notice]);
+
   function toggleShelfPrivacy() {
     const nextValue = !shelfPrivate;
     onShelfPrivacyChange?.(nextValue);
     setNotice(nextValue ? "Sua estante agora esta privada." : "Sua estante agora esta publica.");
+  }
+
+  function toggleNotificationPreference(preferenceId, label) {
+    const nextValue = !notificationPreferences[preferenceId];
+    onNotificationPreferenceChange?.(preferenceId);
+    setNotice(`${label} ${nextValue ? "ativadas" : "desativadas"}.`);
   }
 
   return (
@@ -49,29 +66,14 @@ export function SettingsScreen({
             <SettingRow
               title="Atividade social"
               description="Curtidas, comentarios, respostas e novos seguidores."
-              active
-              onPress={() => setNotice("Preferencias de notificacao serao ligadas ao backend depois.")}
+              active={notificationPreferences.social}
+              onPress={() => toggleNotificationPreference("social", "Notificacoes sociais")}
             />
             <SettingRow
               title="Listas e livros"
               description="Avisos sobre listas salvas e novidades em livros marcados."
-              active
-              onPress={() => setNotice("Essas preferencias ficam preparadas para a proxima etapa.")}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Conta</Text>
-            <ActionRow
-              title="Alterar senha"
-              description="Disponivel quando a autenticacao estiver ligada."
-              onPress={() => setNotice("Alteracao de senha depende do login real.")}
-            />
-            <ActionRow
-              danger
-              title="Sair da conta"
-              description="Fluxo preparado para quando tivermos autenticacao."
-              onPress={() => setNotice("Saida da conta sera ativada com o backend.")}
+              active={notificationPreferences.books}
+              onPress={() => toggleNotificationPreference("books", "Notificacoes de listas e livros")}
             />
           </View>
         </ScrollView>
@@ -97,18 +99,6 @@ function SettingRow({ title, description, active, onPress }) {
       <View style={[styles.toggle, active && styles.toggleActive]}>
         <View style={[styles.toggleThumb, active && styles.toggleThumbActive]} />
       </View>
-    </Pressable>
-  );
-}
-
-function ActionRow({ title, description, danger = false, onPress }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.row}>
-      <View style={styles.rowCopy}>
-        <Text style={[styles.rowTitle, danger && styles.dangerText]}>{title}</Text>
-        <Text style={styles.rowDescription}>{description}</Text>
-      </View>
-      <Icon name="chevron" color={colors.textMuted} size={20} />
     </Pressable>
   );
 }
@@ -229,9 +219,6 @@ const styles = StyleSheet.create({
   toggleThumbActive: {
     alignSelf: "flex-end",
     backgroundColor: colors.ink
-  },
-  dangerText: {
-    color: "#d96060"
   },
   noticeToast: {
     position: "absolute",

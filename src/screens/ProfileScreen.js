@@ -5,14 +5,18 @@ import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks, mockLists, mockReviews, mockUsers } from "../data/mockFeed";
+import { getBooks, getLists, getReviews, getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
 const activityTabs = ["Resenhas", "Avaliacoes", "Listas"];
-const moreOptions = ["Compartilhar perfil", "Denunciar usuario", "Bloquear usuario", "Silenciar usuario"];
-const ownProfileOptions = ["Minhas interacoes", "Configuracoes", "Compartilhar perfil", "Sair da conta"];
+const moreOptions = ["Compartilhar perfil", "Copiar link", "Denunciar usuario", "Bloquear usuario", "Silenciar usuario"];
+const ownProfileOptions = ["Minhas interacoes", "Configuracoes", "Compartilhar perfil", "Copiar link"];
+const mockBooks = getBooks();
+const mockLists = getLists();
+const mockReviews = getReviews();
+const mockUsers = getUsers();
 
 function waitForSheetClose() {
   return new Promise((resolve) => setTimeout(resolve, 180));
@@ -48,6 +52,7 @@ export function ProfileScreen({
   const user = baseUser.id === "yasmin" && profileOverride ? { ...baseUser, ...profileOverride } : baseUser;
   const isOwnProfile = user.id === "yasmin";
   const followingProfile = followedUserIds.includes(user.id);
+  const displayFollowing = isOwnProfile ? String(followedUserIds.length) : user.following;
   const booksById = useMemo(
     () => Object.fromEntries(mockBooks.map((book) => [book.id, book])),
     []
@@ -69,6 +74,15 @@ export function ProfileScreen({
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab, userId]);
+
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => setNotice(""), 2200);
+    return () => clearTimeout(timeout);
+  }, [notice]);
 
   function selectTab(tab) {
     setActiveTab(tab);
@@ -94,6 +108,18 @@ export function ProfileScreen({
     }
   }
 
+  async function copyProfileLink() {
+    const profileLink = `bookclub://usuarios/${user.id}`;
+
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(profileLink);
+      setNotice("Link do perfil copiado.");
+      return;
+    }
+
+    setNotice(`Link do perfil: ${profileLink}`);
+  }
+
   async function handleProfileOption(option) {
     setMoreOpen(false);
 
@@ -107,28 +133,28 @@ export function ProfileScreen({
       return;
     }
 
+    if (option === "Copiar link") {
+      await copyProfileLink();
+      return;
+    }
+
     if (option === "Configuracoes") {
       onSettingsOpen?.();
       return;
     }
 
-    if (option === "Sair da conta") {
-      setNotice("Saida da conta vai ser ligada quando tivermos autenticacao.");
-      return;
-    }
-
     if (option === "Denunciar usuario") {
-      setNotice("Denuncia registrada neste exemplo.");
+      setNotice("Denuncia registrada para analise.");
       return;
     }
 
     if (option === "Bloquear usuario") {
-      setNotice("Usuario bloqueado neste exemplo.");
+      setNotice("Usuario bloqueado.");
       return;
     }
 
     if (option === "Silenciar usuario") {
-      setNotice("Usuario silenciado neste exemplo.");
+      setNotice("Usuario silenciado.");
     }
   }
 
@@ -166,7 +192,7 @@ export function ProfileScreen({
                   onPress={() => onConnectionsOpen?.(user.id, "Seguindo")}
                   style={styles.socialPill}
                 >
-                  <Text style={styles.socialText}><Text style={styles.socialNumber}>{user.following}</Text> seguindo</Text>
+                  <Text style={styles.socialText}><Text style={styles.socialNumber}>{displayFollowing}</Text> seguindo</Text>
                 </Pressable>
               </View>
             </View>
@@ -177,7 +203,10 @@ export function ProfileScreen({
           <View style={styles.actions}>
             <Pressable
               accessibilityRole="button"
-              onPress={isOwnProfile ? onEditProfile : () => onToggleFollow?.(user.id)}
+              onPress={isOwnProfile ? onEditProfile : () => {
+                onToggleFollow?.(user.id);
+                setNotice(followingProfile ? "Voce deixou de seguir este perfil." : "Agora voce segue este perfil.");
+              }}
               style={[styles.primaryAction, !isOwnProfile && followingProfile && styles.followingAction]}
             >
               <Text style={[styles.primaryActionText, !isOwnProfile && followingProfile && styles.followingActionText]}>
@@ -223,7 +252,7 @@ export function ProfileScreen({
               <View style={styles.emptyActivity}>
                 <Text style={styles.emptyActivityTitle}>Nada por aqui ainda</Text>
                 <Text style={styles.emptyActivityText}>
-                  Quando houver atividade nessa aba, ela aparece aqui.
+                  As proximas atividades dessa aba ficam reunidas neste espaco.
                 </Text>
               </View>
             ) : null}
@@ -311,7 +340,13 @@ function ActivityCard({ activity, onBookOpen, onListOpen, onReviewOpen }) {
     return (
       <Pressable accessibilityRole="button" onPress={() => onReviewOpen?.(activity.review.id, "profile")} style={styles.activityCard}>
         <View style={styles.reviewLayout}>
-          <Pressable onPress={() => onBookOpen?.(activity.book.id)} style={styles.smallCover}>
+          <Pressable
+            onPress={(event) => {
+              event.stopPropagation?.();
+              onBookOpen?.(activity.book.id);
+            }}
+            style={styles.smallCover}
+          >
             <BookCover book={activity.book} size="small" />
           </Pressable>
           <View style={styles.activityCopy}>
@@ -346,23 +381,6 @@ function ActivityCard({ activity, onBookOpen, onListOpen, onReviewOpen }) {
       <Text style={styles.activityLabel}>{activity.label}</Text>
       <Text style={styles.activityTitle} numberOfLines={2}>{activity.list.title}</Text>
     </Pressable>
-  );
-}
-
-function ActivityTop({ activity, rating }) {
-  return (
-    <View style={styles.activityTop}>
-      <View style={styles.activityPerson}>
-        <View style={styles.miniAvatar}>
-          <Text style={styles.miniAvatarText}>{activity.label[0]}</Text>
-        </View>
-        <View style={styles.activityPersonCopy}>
-          <Text style={styles.activityLabel}>{activity.label}</Text>
-          <Text style={styles.activityTime}>{activity.time}</Text>
-        </View>
-      </View>
-      {rating ? <RatingStars rating={rating} size={14} /> : null}
-    </View>
   );
 }
 
@@ -663,49 +681,11 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 5
   },
-  activityTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-    marginBottom: spacing.md
-  },
-  activityPerson: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm
-  },
-  miniAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 15,
-    backgroundColor: "#fff1cd",
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  miniAvatarText: {
-    color: colors.ink,
-    fontFamily: fonts.display,
-    fontSize: 15
-  },
-  activityPersonCopy: {
-    flex: 1,
-    minWidth: 0
-  },
   activityLabel: {
     color: colors.text,
     fontFamily: fonts.bodyBold,
     fontSize: 14,
     lineHeight: 18
-  },
-  activityTime: {
-    color: colors.textMuted,
-    fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 15,
-    marginTop: 1
   },
   reviewLayout: {
     flexDirection: "row",

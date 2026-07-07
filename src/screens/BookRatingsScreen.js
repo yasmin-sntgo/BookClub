@@ -1,23 +1,17 @@
 import { useMemo } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 
-import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks, mockReviews, mockUsers } from "../data/mockFeed";
+import { getBooks, getReviews, getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
-const ratingBars = [
-  { label: "5", value: "86%" },
-  { label: "4", value: "58%" },
-  { label: "3", value: "27%" },
-  { label: "2", value: "12%" },
-  { label: "1", value: "6%" }
-];
+const mockBooks = getBooks();
+const mockReviews = getReviews();
+const mockUsers = getUsers();
 
 export function BookRatingsScreen({
   bookId = "dune",
@@ -89,39 +83,6 @@ export function BookRatingsScreen({
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.summaryCard}>
-            <BookCover book={book} size="medium" />
-            <View style={styles.summaryText}>
-              <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
-              <Text style={styles.bookAuthor} numberOfLines={1}>{book.author}</Text>
-              <View style={styles.scoreLine}>
-                <Text style={styles.scoreNumber}>{book.rating}</Text>
-                <RatingStars rating={book.rating} size={14} />
-              </View>
-              <Text style={styles.countText}>{book.ratingsCount} avaliacoes no catalogo</Text>
-            </View>
-          </View>
-
-          <View style={styles.distributionCard}>
-            {ratingBars.map((bar) => (
-              <View key={bar.label} style={styles.barRow}>
-                <Text style={styles.barLabel}>{bar.label}</Text>
-                <View style={styles.barTrack}>
-                  <LinearGradient
-                    colors={[colors.accent, colors.warm]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[styles.barFill, { width: bar.value }]}
-                  />
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Notas recentes</Text>
-          </View>
-
           <View style={styles.ratingsList}>
             {ratingRows.map((rating) => (
               <RatingRow
@@ -213,99 +174,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: 112,
     gap: spacing.md
-  },
-  summaryCard: {
-    flexDirection: "row",
-    gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.035)"
-  },
-  summaryText: {
-    flex: 1,
-    justifyContent: "center"
-  },
-  bookTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 24,
-    lineHeight: 28
-  },
-  bookAuthor: {
-    color: colors.textSoft,
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 3
-  },
-  scoreLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginTop: spacing.sm
-  },
-  scoreNumber: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 28,
-    lineHeight: 32
-  },
-  countText: {
-    color: colors.textMuted,
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2
-  },
-  distributionCard: {
-    padding: spacing.md,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.025)",
-    gap: spacing.sm
-  },
-  barRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm
-  },
-  barLabel: {
-    width: 18,
-    color: colors.textMuted,
-    fontFamily: fonts.bodyBold,
-    fontSize: 12
-  },
-  barTrack: {
-    flex: 1,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    overflow: "hidden"
-  },
-  barFill: {
-    height: "100%",
-    borderRadius: 999
-  },
-  sectionHeader: {
-    marginTop: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 22,
-    lineHeight: 26
-  },
-  sectionMeta: {
-    color: colors.textMuted,
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    lineHeight: 16
   },
   ratingsList: {
     borderTopWidth: 1,

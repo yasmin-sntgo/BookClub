@@ -4,10 +4,13 @@ import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "rea
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { mockBooks, mockUsers } from "../data/mockFeed";
+import { getBooks, getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
+
+const mockBooks = getBooks();
+const mockUsers = getUsers();
 
 const shelfByUser = {
   lia: [

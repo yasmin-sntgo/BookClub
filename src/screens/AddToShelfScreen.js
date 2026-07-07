@@ -4,7 +4,7 @@ import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { mockBooks } from "../data/mockFeed";
+import { getBooks } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
@@ -15,6 +15,7 @@ const statusOptions = [
   { id: "read", title: "Lido", description: "ja terminou esse livro" },
   { id: "abandoned", title: "Abandonado", description: "parou e quer registrar" }
 ];
+const mockBooks = getBooks();
 
 export function AddToShelfScreen({
   initialBookId = null,

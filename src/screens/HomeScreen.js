@@ -1,27 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, SafeAreaView, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { FeedTabs } from "../components/FeedTabs";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks, mockComments, mockReviews, mockUsers } from "../data/mockFeed";
+import { SpoilerText } from "../components/SpoilerText";
+import { getBooks, getComments, getReviews, getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
 const reviewFilters = [
-  { id: "all", label: "Todos" },
-  { id: "following", label: "Seguindo" },
-  { id: "popular", label: "Mais curtidas" }
+  { id: "all", label: "Pra voce" },
+  { id: "following", label: "Seguindo" }
 ];
+const mockBooks = getBooks();
+const mockComments = getComments();
+const mockReviews = getReviews();
+const mockUsers = getUsers();
 
 export function HomeScreen({
   initialTab = "books",
   followedUserIds = [],
   comments = mockComments,
   likedReviewIds = [],
+  revealedSpoilerReviewIds = [],
   reviews = mockReviews,
   savedReviewIds = [],
   onBookOpen,
@@ -32,10 +37,12 @@ export function HomeScreen({
   onTabChange,
   onToggleReviewLike,
   onToggleReviewSave,
+  onSpoilerReveal,
   onUserOpen,
   unreadNotificationsCount = 0
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [reviewFilterMode, setReviewFilterMode] = useState("all");
   const [notice, setNotice] = useState("");
   const booksById = useMemo(
     () => Object.fromEntries(mockBooks.map((book) => [book.id, book])),
@@ -46,6 +53,33 @@ export function HomeScreen({
     setActiveTab(initialTab);
   }, [initialTab]);
 
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => setNotice(""), 2200);
+    return () => clearTimeout(timeout);
+  }, [notice]);
+
+  async function shareFeedReview(review, book) {
+    setNotice("Abrindo compartilhamento...");
+    try {
+      const result = await Share.share({
+        message: `${review.user} resenhou ${book.title} no BookClub: ${review.text}\nbookclub://resenhas/${review.id}`
+      });
+
+      if (result?.action === Share.dismissedAction) {
+        setNotice("Compartilhamento cancelado.");
+        return;
+      }
+
+      setNotice("Resenha pronta para compartilhar.");
+    } catch (error) {
+      setNotice(`Resenha: bookclub://resenhas/${review.id}`);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.shell}>
@@ -55,13 +89,18 @@ export function HomeScreen({
           unreadNotificationsCount={unreadNotificationsCount}
         />
         <View style={styles.tabsWrap}>
-          <FeedTabs
-            activeTab={activeTab}
-            onChange={(nextTab) => {
-              setActiveTab(nextTab);
-              onTabChange?.(nextTab);
-            }}
-          />
+          <View style={styles.feedControlRow}>
+            <FeedTabs
+              activeTab={activeTab}
+              onChange={(nextTab) => {
+                setActiveTab(nextTab);
+                onTabChange?.(nextTab);
+              }}
+            />
+            {activeTab === "reviews" ? (
+              <ReviewFilterTabs filterMode={reviewFilterMode} onChange={setReviewFilterMode} />
+            ) : null}
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -72,12 +111,17 @@ export function HomeScreen({
               followedUserIds={followedUserIds}
               comments={comments}
               likedReviewIds={likedReviewIds}
+              revealedSpoilerReviewIds={revealedSpoilerReviewIds}
+              reviewFilterMode={reviewFilterMode}
               reviews={reviews}
+              savedReviewIds={savedReviewIds}
               booksById={booksById}
               onBookOpen={onBookOpen}
               onReviewOpen={onReviewOpen}
-              onShareReview={() => setNotice("Resenha pronta para compartilhar.")}
+              onShareReview={shareFeedReview}
               onToggleReviewLike={onToggleReviewLike}
+              onToggleReviewSave={onToggleReviewSave}
+              onSpoilerReveal={onSpoilerReveal}
               onUserOpen={onUserOpen}
             />
           )}
@@ -200,57 +244,39 @@ function ReviewsPanel({
   followedUserIds,
   comments,
   likedReviewIds,
+  revealedSpoilerReviewIds,
+  reviewFilterMode = "all",
   reviews,
+  savedReviewIds,
   booksById,
   onBookOpen,
   onReviewOpen,
   onShareReview,
   onToggleReviewLike,
   onToggleReviewSave,
+  onSpoilerReveal,
   onUserOpen
 }) {
-  const [filterMode, setFilterMode] = useState("all");
   const followedHandles = mockUsers
     .filter((user) => followedUserIds.includes(user.id))
     .map((user) => user.handle);
   const visibleReviews = useMemo(() => {
-    if (filterMode === "following") {
+    if (reviewFilterMode === "following") {
       return reviews.filter((review) => followedHandles.includes(review.handle));
     }
 
-    if (filterMode === "popular") {
-      return [...reviews].sort((first, second) => second.likes - first.likes);
-    }
-
     return reviews;
-  }, [filterMode, followedHandles, reviews]);
-  const selectedFilter = reviewFilters.find((filter) => filter.id === filterMode) ?? reviewFilters[0];
+  }, [reviewFilterMode, followedHandles, reviews]);
 
   return (
     <View style={styles.reviews}>
-      <SectionHeader
-        title={filterMode === "all" ? "Resenhas recentes" : selectedFilter.label}
-      />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChips}>
-        {reviewFilters.map((filter) => (
-          <Pressable
-            key={filter.id}
-            accessibilityRole="button"
-            onPress={() => setFilterMode(filter.id)}
-            style={[styles.filterChip, filterMode === filter.id && styles.activeFilterChip]}
-          >
-            <Text style={[styles.filterChipText, filterMode === filter.id && styles.activeFilterChipText]}>
-              {filter.label}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
       {visibleReviews.map((review) => (
         <ReviewPost
           key={review.id}
           review={review}
           book={booksById[review.bookId]}
           liked={likedReviewIds.includes(review.id)}
+          spoilerRevealed={revealedSpoilerReviewIds.includes(review.id)}
           saved={savedReviewIds.includes(review.id)}
           commentCount={countReviewComments(review, comments)}
           onBookOpen={onBookOpen}
@@ -258,6 +284,7 @@ function ReviewsPanel({
           onShareReview={onShareReview}
           onToggleLike={() => onToggleReviewLike?.(review.id)}
           onToggleSave={() => onToggleReviewSave?.(review.id)}
+          onSpoilerReveal={() => onSpoilerReveal?.(review.id)}
           onUserOpen={onUserOpen}
         />
       ))}
@@ -271,7 +298,30 @@ function ReviewsPanel({
   );
 }
 
-function ReviewPost({ review, book, liked, saved, commentCount, onBookOpen, onReviewOpen, onShareReview, onToggleLike, onToggleSave, onUserOpen }) {
+function ReviewFilterTabs({ filterMode = "all", onChange }) {
+  return (
+    <View style={styles.reviewFilterTabs}>
+      {reviewFilters.map((filter) => {
+        const active = filterMode === filter.id;
+
+        return (
+          <Pressable
+            key={filter.id}
+            accessibilityRole="button"
+            onPress={() => onChange?.(filter.id)}
+            style={[styles.reviewFilterTab, active && styles.activeReviewFilterTab]}
+          >
+            <Text style={[styles.reviewFilterText, active && styles.activeReviewFilterText]}>
+              {filter.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function ReviewPost({ review, book, liked, saved, spoilerRevealed, commentCount, onBookOpen, onReviewOpen, onShareReview, onSpoilerReveal, onToggleLike, onToggleSave, onUserOpen }) {
   const userId = findUserId(review.handle);
   const likeCount = review.likes + (liked && !review.liked ? 1 : 0) - (!liked && review.liked ? 1 : 0);
 
@@ -291,21 +341,36 @@ function ReviewPost({ review, book, liked, saved, commentCount, onBookOpen, onRe
         </View>
         <View style={styles.userInfo}>
           <Text style={styles.reviewUser}>{review.user}</Text>
-          <Text style={styles.reviewHandle}>{review.handle} · {review.time}</Text>
+          <Text style={styles.reviewHandle}>{review.handle} - {review.time}</Text>
         </View>
         </Pressable>
       </View>
 
-      <Pressable onPress={() => onBookOpen?.(book.id, "reviews")} style={styles.reviewBook}>
+      <Pressable
+        onPress={(event) => {
+          event.stopPropagation?.();
+          onBookOpen?.(book.id, "reviews");
+        }}
+        style={styles.reviewBook}
+      >
         <BookCover book={book} size="tiny" />
         <View style={styles.reviewBookInfo}>
-          <Text style={styles.reviewBookTitle} numberOfLines={2}>{book.title}</Text>
-          <Text style={styles.reviewBookAuthor} numberOfLines={1}>{book.author}</Text>
-          <RatingStars rating={review.rating} size={13} />
+          <Text style={styles.reviewBookTitle} numberOfLines={1}>{book.title}</Text>
+          <View style={styles.reviewBookMeta}>
+            <Text style={styles.reviewBookAuthor} numberOfLines={1}>{book.author}</Text>
+            <RatingStars rating={review.rating} size={12} />
+          </View>
         </View>
       </Pressable>
 
-      <Text style={styles.reviewText} numberOfLines={3}>{review.text}</Text>
+      <SpoilerText
+        hasSpoiler={review.hasSpoiler}
+        onReveal={onSpoilerReveal}
+        revealed={spoilerRevealed}
+        text={review.text}
+        style={styles.reviewText}
+        numberOfLines={3}
+      />
 
       <View style={styles.reviewActions}>
         <ActionIcon
@@ -316,22 +381,22 @@ function ReviewPost({ review, book, liked, saved, commentCount, onBookOpen, onRe
           onPress={onToggleLike}
         />
         <ActionIcon icon="comment" count={commentCount} />
-        <ActionIcon
+        <View style={styles.actionSpacer} />
+        <IconAction
           icon="bookmark"
-          count=""
           active={saved}
           activeColor={colors.accent}
           onPress={onToggleSave}
         />
-        <View style={styles.actionSpacer} />
         <Pressable
           accessibilityRole="button"
           onPress={(event) => {
             event.stopPropagation?.();
-            onShareReview?.();
+            onShareReview?.(review, book);
           }}
+          style={styles.secondaryAction}
         >
-          <Text style={styles.shareText}>compartilhar</Text>
+          <Icon name="share" color={colors.textMuted} size={16} strokeWidth={2} />
         </Pressable>
       </View>
     </Pressable>
@@ -364,6 +429,29 @@ function ActionIcon({ icon, count, active = false, activeColor = colors.accent, 
         fill={active && (icon === "heart" || icon === "bookmark") ? activeColor : "none"}
       />
       <Text style={[styles.actionText, active && { color }]}>{count}</Text>
+    </Pressable>
+  );
+}
+
+function IconAction({ icon, active = false, activeColor = colors.accent, onPress }) {
+  const color = active ? activeColor : colors.textMuted;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={(event) => {
+        event.stopPropagation?.();
+        onPress?.();
+      }}
+      style={styles.secondaryAction}
+    >
+      <Icon
+        name={icon}
+        color={color}
+        size={16}
+        fill={active && icon === "bookmark" ? activeColor : "none"}
+        strokeWidth={2}
+      />
     </Pressable>
   );
 }
@@ -455,12 +543,19 @@ const styles = StyleSheet.create({
   },
   tabsWrap: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingTop: 10,
+    paddingBottom: 8,
     backgroundColor: colors.background
   },
+  feedControlRow: {
+    minHeight: 34,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md
+  },
   content: {
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: 120
   },
   railSection: {
@@ -520,33 +615,38 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
   reviews: {
-    paddingHorizontal: 14
+    paddingHorizontal: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border
   },
-  filterChips: {
-    gap: 8,
-    paddingBottom: spacing.md
-  },
-  filterChip: {
-    minHeight: 34,
-    borderRadius: 17,
-    paddingHorizontal: spacing.md,
+  reviewFilterTabs: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.035)",
+    gap: 4,
+    padding: 3,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.03)",
     borderWidth: 1,
-    borderColor: colors.border
+    borderColor: "rgba(240,236,228,0.08)"
   },
-  activeFilterChip: {
-    backgroundColor: colors.accentWash,
-    borderColor: "rgba(157,192,216,0.24)"
+  reviewFilterTab: {
+    minHeight: 24,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center"
   },
-  filterChipText: {
+  activeReviewFilterTab: {
+    backgroundColor: "rgba(157,192,216,0.14)"
+  },
+  reviewFilterText: {
     color: colors.textMuted,
     fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    lineHeight: 16
+    fontSize: 10,
+    lineHeight: 13
   },
-  activeFilterChipText: {
+  activeReviewFilterText: {
     color: colors.text
   },
   emptyFilter: {
@@ -572,20 +672,12 @@ const styles = StyleSheet.create({
     marginTop: 5
   },
   reviewCard: {
-    padding: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.045)",
-    marginBottom: 12,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.18,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 16,
-    elevation: 5
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(240,236,228,0.075)"
   },
   reviewTop: {
-    marginBottom: 10
+    marginBottom: 9
   },
   reviewProfile: {
     flexDirection: "row",
@@ -626,18 +718,11 @@ const styles = StyleSheet.create({
   },
   reviewBook: {
     flexDirection: "row",
-    gap: 10,
-    padding: 9,
-    borderRadius: 16,
-    backgroundColor: "rgba(0,0,0,0.42)",
-    borderWidth: 1,
-    borderColor: "rgba(240,236,228,0.09)",
-    marginBottom: 10,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 5 },
-    shadowRadius: 10,
-    elevation: 2
+    alignItems: "center",
+    gap: 9,
+    paddingVertical: 6,
+    marginBottom: 11,
+    opacity: 0.94
   },
   reviewBookInfo: {
     flex: 1,
@@ -646,28 +731,33 @@ const styles = StyleSheet.create({
   reviewBookTitle: {
     color: colors.text,
     fontFamily: fonts.bodyBold,
-    fontSize: 14,
-    lineHeight: 17
+    fontSize: 13,
+    lineHeight: 16
+  },
+  reviewBookMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 3
   },
   reviewBookAuthor: {
-    color: colors.textSoft,
+    color: colors.textMuted,
     fontFamily: fonts.body,
     fontSize: 11,
     lineHeight: 14,
-    marginTop: 2,
-    marginBottom: 5
+    maxWidth: 150
   },
   reviewText: {
-    color: "#d1c8b8",
+    color: colors.textSoft,
     fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 10
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 12
   },
   reviewActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.lg
+    gap: 18
   },
   action: {
     flexDirection: "row",
@@ -682,10 +772,12 @@ const styles = StyleSheet.create({
   actionSpacer: {
     flex: 1
   },
-  shareText: {
-    color: colors.textMuted,
-    fontFamily: fonts.bodyBold,
-    fontSize: 12
+  secondaryAction: {
+    width: 32,
+    height: 32,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center"
   },
   noticeToast: {
     position: "absolute",

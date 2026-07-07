@@ -90,6 +90,15 @@ export function Icon({ name, color = "currentColor", size = 22, strokeWidth = 1.
     );
   }
 
+  if (name === "lock") {
+    return (
+      <Svg {...props}>
+        <Path {...lineProps} d="M7 11V8a5 5 0 0 1 10 0v3" />
+        <Path {...lineProps} d="M6 11h12v10H6Z" />
+      </Svg>
+    );
+  }
+
   if (name === "share") {
     return (
       <Svg {...props}>

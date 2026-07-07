@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,19 +14,22 @@ import { AppInput } from "../components/AppInput";
 import { AuthCard } from "../components/AuthCard";
 import { BackgroundGlow } from "../components/BackgroundGlow";
 import { BrandLogo } from "../components/BrandLogo";
-import { MascotTentacles } from "../components/MascotTentacles";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { type } from "../theme/typography";
 
-export function LoginScreen({ onCreateAccount, onLogin }) {
-  const [email, setEmail] = useState("");
+export function LoginScreen({ initialEmail = "", accountNotice = "", onCreateAccount, onLogin }) {
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
+  const [resetNotice, setResetNotice] = useState("");
+
+  useEffect(() => {
+    setEmail(initialEmail);
+  }, [initialEmail]);
 
   return (
     <SafeAreaView style={styles.safe}>
       <BackgroundGlow />
-      <MascotTentacles />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboard}
@@ -54,9 +57,15 @@ export function LoginScreen({ onCreateAccount, onLogin }) {
               placeholder="********"
             />
 
-            <Pressable style={styles.forgot}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setResetNotice("Confira seu e-mail para recuperar o acesso.")}
+              style={styles.forgot}
+            >
               <Text style={styles.forgotText}>esqueci minha senha</Text>
             </Pressable>
+            {accountNotice ? <Text style={styles.accountNotice}>{accountNotice}</Text> : null}
+            {resetNotice ? <Text style={styles.resetNotice}>{resetNotice}</Text> : null}
 
             <AppButton onPress={onLogin} style={styles.loginButton}>Entrar</AppButton>
 
@@ -125,6 +134,20 @@ const styles = StyleSheet.create({
     ...type.smallItalic,
     color: colors.textMuted,
     textDecorationLine: "underline"
+  },
+  resetNotice: {
+    ...type.small,
+    color: colors.textMuted,
+    alignSelf: "flex-end",
+    textAlign: "right",
+    marginTop: spacing.xs
+  },
+  accountNotice: {
+    ...type.small,
+    color: colors.accent,
+    alignSelf: "stretch",
+    textAlign: "center",
+    marginTop: spacing.xs
   },
   loginButton: {
     marginTop: spacing.lg

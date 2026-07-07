@@ -1,19 +1,28 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks } from "../data/mockFeed";
+import { getBooks } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
 
 const filters = ["Todos", "Lendo", "Quero ler", "Lidos", "Favoritos", "Abandonados"];
+const mockBooks = getBooks();
 
-export function ShelfScreen({ shelfEntries = [], onAddToShelf, onBookOpen, onCreate, onNavigate }) {
-  const [activeFilter, setActiveFilter] = useState("Todos");
+export function ShelfScreen({
+  initialFilter = "Todos",
+  shelfEntries = [],
+  onAddToShelf,
+  onBookOpen,
+  onCreate,
+  onFilterChange,
+  onNavigate
+}) {
+  const [activeFilter, setActiveFilter] = useState(initialFilter);
   const booksById = useMemo(
     () => mockBooks.reduce((books, book) => ({ ...books, [book.id]: book }), {}),
     []
@@ -45,6 +54,15 @@ export function ShelfScreen({ shelfEntries = [], onAddToShelf, onBookOpen, onCre
     [activeFilter, shelfBooks]
   );
   const hasBooks = Object.values(shelfBooks).some((books) => books.length > 0);
+
+  useEffect(() => {
+    setActiveFilter(initialFilter);
+  }, [initialFilter]);
+
+  function selectFilter(filter) {
+    setActiveFilter(filter);
+    onFilterChange?.(filter);
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -78,7 +96,7 @@ export function ShelfScreen({ shelfEntries = [], onAddToShelf, onBookOpen, onCre
                 {filters.map((filter) => (
                   <Pressable
                     key={filter}
-                    onPress={() => setActiveFilter(filter)}
+                    onPress={() => selectFilter(filter)}
                     style={[styles.filterChip, activeFilter === filter && styles.activeChip]}
                   >
                     <Text style={[styles.filterText, activeFilter === filter && styles.activeFilterText]}>{filter}</Text>
@@ -89,13 +107,19 @@ export function ShelfScreen({ shelfEntries = [], onAddToShelf, onBookOpen, onCre
               {visibleSections.length > 0 ? (
                 visibleSections.map((section) =>
                   section.type === "favorites" ? (
-                    <FavoritesSection key={section.key} books={section.books} onBookOpen={onBookOpen} />
+                    <FavoritesSection
+                      key={section.key}
+                      books={section.books}
+                      onBookOpen={onBookOpen}
+                      onShowAll={() => selectFilter("Favoritos")}
+                    />
                   ) : (
                     <BookRail
                       key={section.key}
                       title={section.title}
                       action={activeFilter === "Todos" ? "Ver todos" : undefined}
                       books={section.books}
+                      onAction={() => selectFilter(section.filter)}
                       onBookOpen={onBookOpen}
                       muted={section.muted}
                     />
@@ -122,10 +146,10 @@ export function ShelfScreen({ shelfEntries = [], onAddToShelf, onBookOpen, onCre
 function getVisibleSections(activeFilter, shelfBooks) {
   const sections = [
     { key: "favorites", type: "favorites", title: "Favoritos", books: shelfBooks.favorites },
-    { key: "reading", title: "Lendo agora", books: shelfBooks.reading },
-    { key: "want", title: "Quero ler", books: shelfBooks.want },
-    { key: "read", title: "Lidos", books: shelfBooks.read },
-    { key: "abandoned", title: "Abandonados", books: shelfBooks.abandoned, muted: true }
+    { key: "reading", filter: "Lendo", title: "Lendo agora", books: shelfBooks.reading },
+    { key: "want", filter: "Quero ler", title: "Quero ler", books: shelfBooks.want },
+    { key: "read", filter: "Lidos", title: "Lidos", books: shelfBooks.read },
+    { key: "abandoned", filter: "Abandonados", title: "Abandonados", books: shelfBooks.abandoned, muted: true }
   ];
 
   if (activeFilter === "Todos") {
@@ -163,10 +187,10 @@ function EmptyShelf({ onAddBook, onExplore }) {
   );
 }
 
-function FavoritesSection({ books, onBookOpen }) {
+function FavoritesSection({ books, onBookOpen, onShowAll }) {
   return (
     <View style={styles.section}>
-      <SectionHeader title="Favoritos" action="Ver todos" />
+      <SectionHeader title="Favoritos" action="Ver todos" onAction={onShowAll} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -188,10 +212,10 @@ function FavoritesSection({ books, onBookOpen }) {
   );
 }
 
-function BookRail({ title, action, books, onBookOpen, muted = false }) {
+function BookRail({ title, action, books, onAction, onBookOpen, muted = false }) {
   return (
     <View style={[styles.section, muted && styles.mutedSection]}>
-      <SectionHeader title={title} action={action} />
+      <SectionHeader title={title} action={action} onAction={onAction} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bookRail}>
         {books.map((book) => (
           <Pressable key={`${title}-${book.id}`} onPress={() => onBookOpen?.(book.id)} style={styles.bookItem}>
@@ -216,11 +240,17 @@ function EmptyFilter({ filter }) {
   );
 }
 
-function SectionHeader({ title, action }) {
+function SectionHeader({ title, action, onAction }) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      {action ? <Text style={styles.sectionAction}>{action}</Text> : null}
+      {action && onAction ? (
+        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8}>
+          <Text style={styles.sectionAction}>{action}</Text>
+        </Pressable>
+      ) : action ? (
+        <Text style={styles.sectionAction}>{action}</Text>
+      ) : null}
     </View>
   );
 }

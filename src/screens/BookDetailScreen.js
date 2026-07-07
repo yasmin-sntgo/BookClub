@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Image, Modal, Pressable, SafeAreaView, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -6,21 +6,20 @@ import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks, mockComments, mockReviews, mockUsers } from "../data/mockFeed";
+import { SpoilerText } from "../components/SpoilerText";
+import { TextFeedbackSheet } from "../components/TextFeedbackSheet";
+import { getBooks, getComments, getReviews, getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
 
-const ratingBars = [
-  { label: "5", value: "86%" },
-  { label: "4", value: "58%" },
-  { label: "3", value: "27%" },
-  { label: "2", value: "12%" },
-  { label: "1", value: "6%" }
-];
+const mockBooks = getBooks();
+const mockComments = getComments();
+const mockReviews = getReviews();
+const mockUsers = getUsers();
 
 const shelfOptions = ["Lendo", "Quero ler", "Lido", "Abandonado"];
-const moreOptions = ["Compartilhar livro", "Sugerir correcao", "Denunciar problema"];
+const moreOptions = ["Compartilhar livro", "Copiar link", "Sugerir correcao", "Denunciar problema"];
 const shelfStatusLabels = {
   reading: "Lendo",
   want: "Quero ler",
@@ -35,6 +34,8 @@ function waitForSheetClose() {
 export function BookDetailScreen({
   bookId = "dune",
   comments = mockComments,
+  likedReviewIds = [],
+  revealedSpoilerReviewIds = [],
   ratings = [],
   reviews = mockReviews,
   shelfEntry,
@@ -45,32 +46,51 @@ export function BookDetailScreen({
   onCreateReview,
   onNavigate,
   onRateBook,
+  onRatingDelete,
   onRatingsOpen,
   onReviewOpen,
   onReviewsOpen,
-  onSearchGenre,
   onShelfStatusChange,
+  onSpoilerReveal,
   onToggleFavorite,
   onUserOpen
 }) {
   const [synopsisOpen, setSynopsisOpen] = useState(false);
   const [shelfOpen, setShelfOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [feedbackMode, setFeedbackMode] = useState(null);
   const [notice, setNotice] = useState("");
+  const [similarLimit, setSimilarLimit] = useState(4);
   const book = mockBooks.find((item) => item.id === bookId) ?? mockBooks[1];
   const review = useMemo(
     () => reviews.find((item) => item.bookId === book.id),
     [book.id, reviews]
   );
   const userRating = ratings.find((item) => item.bookId === book.id);
-  const similarBooks = mockBooks.filter((item) => item.id !== book.id).slice(0, 4);
+  const allSimilarBooks = mockBooks.filter((item) => item.id !== book.id);
+  const similarBooks = allSimilarBooks.slice(0, similarLimit);
+
+  useEffect(() => {
+    setSimilarLimit(4);
+  }, [book.id]);
+
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => setNotice(""), 2200);
+    return () => clearTimeout(timeout);
+  }, [notice]);
 
   async function shareBook() {
     await waitForSheetClose();
+    const bookLink = `bookclub://livros/${book.id}`;
+
     setNotice("Abrindo compartilhamento...");
     try {
       const result = await Share.share({
-        message: `${book.title} - ${book.author}\nbookclub://livros/${book.id}`
+        message: `${book.title} - ${book.author}\n${bookLink}`
       });
 
       if (result?.action === Share.dismissedAction) {
@@ -80,8 +100,26 @@ export function BookDetailScreen({
 
       setNotice("Livro pronto para compartilhar.");
     } catch (error) {
-      setNotice(`Livro: bookclub://livros/${book.id}`);
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(bookLink);
+        setNotice("Compartilhamento indisponivel. Link copiado.");
+        return;
+      }
+
+      setNotice(`Link do livro: ${bookLink}`);
     }
+  }
+
+  async function copyBookLink() {
+    const bookLink = `bookclub://livros/${book.id}`;
+
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(bookLink);
+      setNotice("Link do livro copiado.");
+      return;
+    }
+
+    setNotice(`Link do livro: ${bookLink}`);
   }
 
   return (
@@ -95,7 +133,10 @@ export function BookDetailScreen({
             onCreateReview={() => onCreateReview?.(book.id)}
             onRateBook={() => onRateBook?.(book.id)}
             onShelf={() => setShelfOpen(true)}
-            onToggleFavorite={() => onToggleFavorite?.(book.id)}
+            onToggleFavorite={() => {
+              onToggleFavorite?.(book.id);
+              setNotice(shelfEntry?.favorite ? "Livro removido dos favoritos." : "Livro marcado como favorito.");
+            }}
             shelfEntry={shelfEntry}
             userRating={userRating}
           />
@@ -105,7 +146,7 @@ export function BookDetailScreen({
             <Pressable
               accessibilityRole="button"
               onPress={() => setSynopsisOpen((current) => !current)}
-              style={[styles.synopsisCard, synopsisOpen && styles.synopsisOpen]}
+              style={[styles.synopsisBlock, synopsisOpen && styles.synopsisOpen]}
             >
               <Text style={styles.synopsisText} numberOfLines={synopsisOpen ? undefined : 4}>
                 {book.synopsis ??
@@ -120,40 +161,26 @@ export function BookDetailScreen({
             </Pressable>
 
             <SectionHeader title="Avaliacoes" action="Ver todas" onAction={() => onRatingsOpen?.(book.id)} />
-            <View style={[styles.scoreCard, !userRating && styles.scoreCardSpacing]}>
-              <View style={styles.scoreBig}>
-                <Text style={styles.scoreNumber}>{book.rating}</Text>
-                <Text style={styles.scoreCaption}>{book.ratingsCount} avaliacoes</Text>
-                {userRating ? <Text style={styles.userRatingText}>sua nota: {userRating.rating}.0</Text> : null}
-              </View>
-              <View style={styles.bars}>
-                {ratingBars.map((bar) => (
-                  <View key={bar.label} style={styles.barRow}>
-                    <Text style={styles.barLabel}>{bar.label}</Text>
-                    <View style={styles.barTrack}>
-                      <LinearGradient
-                        colors={[colors.accent, colors.warm]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={[styles.barFill, { width: bar.value }]}
-                      />
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </View>
-            {userRating ? (
-              <View style={styles.personalRatingCard}>
-                <Text style={styles.personalRatingLabel}>Sua avaliacao</Text>
-                <View style={styles.personalRatingScore}>
-                  <Text style={styles.personalRatingNumber}>{userRating.rating}.0</Text>
-                  <RatingStars rating={userRating.rating} size={13} />
+            <View style={styles.ratingSummary}>
+              <View style={styles.communityRating}>
+                <Text style={styles.ratingSummaryScore}>{book.rating}</Text>
+                <View style={styles.ratingSummaryCopy}>
+                  <RatingStars rating={book.rating} size={15} />
+                  <Text style={styles.ratingSummaryText}>{book.ratingsCount} avaliacoes da comunidade</Text>
                 </View>
               </View>
-            ) : null}
+              {userRating ? (
+                <View style={styles.personalRatingInline}>
+                  <Text style={styles.personalRatingInlineText}>sua nota {userRating.rating}.0</Text>
+                  <Pressable accessibilityRole="button" onPress={() => onRatingDelete?.(book.id)} hitSlop={8}>
+                    <Text style={styles.deleteRatingText}>apagar</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
 
             <SectionHeader
-              title="Resenhas"
+              title="Vozes sobre o livro"
               action={review ? "Todas" : undefined}
               onAction={review ? () => onReviewsOpen?.(book.id) : undefined}
             />
@@ -161,17 +188,24 @@ export function BookDetailScreen({
               <ReviewCard
                 review={review}
                 commentCount={countReviewComments(review, comments)}
+                liked={likedReviewIds.includes(review.id)}
+                spoilerRevealed={revealedSpoilerReviewIds.includes(review.id)}
                 onReviewOpen={onReviewOpen}
+                onSpoilerReveal={() => onSpoilerReveal?.(review.id)}
                 onUserOpen={onUserOpen}
               />
             ) : (
               <View style={styles.emptyReviewCard}>
-                <Text style={styles.emptyReviewTitle}>Ainda nao tem resenhas por aqui</Text>
-                <Text style={styles.emptyReviewText}>se alguem escrever sobre este livro, a resenha aparece nesta area.</Text>
+                <Text style={styles.emptyReviewTitle}>Ainda nao tem vozes por aqui</Text>
+                <Text style={styles.emptyReviewText}>Seja a primeira pessoa a puxar conversa sobre este livro.</Text>
               </View>
             )}
 
-            <SectionHeader title="Semelhantes" action="Ver mais" onAction={() => onSearchGenre?.(book.genre)} />
+            <SectionHeader
+              title="Semelhantes"
+              action={similarLimit < allSimilarBooks.length ? "Ver mais" : undefined}
+              onAction={() => setSimilarLimit((current) => Math.min(current + 4, allSimilarBooks.length))}
+            />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.similarRail}>
               {similarBooks.map((item) => (
                 <Pressable key={item.id} onPress={() => onBookOpen?.(item.id)} style={styles.similarItem}>
@@ -207,16 +241,41 @@ export function BookDetailScreen({
               return;
             }
 
+            if (option === "Copiar link") {
+              await copyBookLink();
+              return;
+            }
+
             if (option === "Sugerir correcao") {
-              setNotice("Sugestao de correcao registrada neste exemplo.");
+              setFeedbackMode("correction");
               return;
             }
 
             if (option === "Denunciar problema") {
-              setNotice("Problema registrado neste exemplo.");
+              setFeedbackMode("report");
             }
           }}
           onClose={() => setMoreOpen(false)}
+        />
+        <TextFeedbackSheet
+          visible={Boolean(feedbackMode)}
+          title={feedbackMode === "correction" ? "Sugerir correcao" : "Denunciar problema"}
+          description={
+            feedbackMode === "correction"
+              ? "Explique qual informacao do livro precisa ser corrigida."
+              : "Descreva o problema para que ele possa ser analisado."
+          }
+          placeholder={
+            feedbackMode === "correction"
+              ? "Ex: editora incorreta, ano errado, sinopse com erro..."
+              : "Explique o que esta errado ou inadequado..."
+          }
+          submitLabel="Registrar"
+          onClose={() => setFeedbackMode(null)}
+          onSubmit={() => {
+            setFeedbackMode(null);
+            setNotice(feedbackMode === "correction" ? "Sugestao registrada." : "Denuncia registrada.");
+          }}
         />
         {notice ? (
           <View style={styles.noticeToast}>
@@ -278,10 +337,6 @@ function Hero({ book, shelfEntry, userRating, onBack, onCreateReview, onMore, on
             <Text style={styles.metaPill}>{book.pages} paginas</Text>
             <Text style={styles.metaPill}>{book.publisher}</Text>
           </View>
-          <View style={styles.heroRating}>
-            <Text style={styles.heroRatingNumber}>{book.rating}</Text>
-            <RatingStars rating={book.rating} size={14} />
-          </View>
         </View>
       </View>
 
@@ -336,12 +391,19 @@ function SectionHeader({ title, action, onAction }) {
   );
 }
 
-function ReviewCard({ review, commentCount, onReviewOpen, onUserOpen }) {
+function ReviewCard({ review, commentCount, liked, spoilerRevealed, onReviewOpen, onSpoilerReveal, onUserOpen }) {
   const userId = mockUsers.find((user) => user.handle === review.handle)?.id ?? "lia";
+  const likeCount = getReviewLikeCount(review, liked);
 
   return (
     <Pressable onPress={() => onReviewOpen?.(review.id, "book")} style={styles.reviewCard}>
-      <Pressable onPress={() => onUserOpen?.(userId)} style={styles.reviewTop}>
+      <Pressable
+        onPress={(event) => {
+          event.stopPropagation?.();
+          onUserOpen?.(userId);
+        }}
+        style={styles.reviewTop}
+      >
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{review.avatar}</Text>
         </View>
@@ -351,11 +413,17 @@ function ReviewCard({ review, commentCount, onReviewOpen, onUserOpen }) {
         </View>
       </Pressable>
       <RatingStars rating={review.rating} size={14} />
-      <Text style={styles.reviewText} numberOfLines={4}>{review.text}</Text>
+      <SpoilerText
+        hasSpoiler={review.hasSpoiler}
+        onReveal={onSpoilerReveal}
+        revealed={spoilerRevealed}
+        text={review.text}
+        style={styles.reviewText}
+        numberOfLines={4}
+      />
       <View style={styles.reviewActions}>
-        <Text style={styles.reviewAction}>{review.likes} curtidas</Text>
+        <Text style={styles.reviewAction}>{likeCount} curtidas</Text>
         <Text style={styles.reviewAction}>{commentCount} respostas</Text>
-        <Text style={styles.readMore}>ler mais</Text>
       </View>
     </Pressable>
   );
@@ -363,6 +431,10 @@ function ReviewCard({ review, commentCount, onReviewOpen, onUserOpen }) {
 
 function countReviewComments(review, comments) {
   return comments.filter((comment) => comment.reviewId === review.id).length || review.comments;
+}
+
+function getReviewLikeCount(review, liked) {
+  return review.likes + (liked && !review.liked ? 1 : 0) - (!liked && review.liked ? 1 : 0);
 }
 
 function OptionSheet({ visible, title, subtitle, options, onSelect, onClose }) {
@@ -416,15 +488,15 @@ const styles = StyleSheet.create({
     paddingBottom: 118
   },
   hero: {
-    minHeight: 414,
+    minHeight: 438,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl,
     overflow: "hidden",
     backgroundColor: colors.background
   },
   heroTall: {
-    minHeight: 438
+    minHeight: 458
   },
   heroShade: {
     ...StyleSheet.absoluteFillObject
@@ -432,7 +504,7 @@ const styles = StyleSheet.create({
   heroTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 30
+    marginBottom: 26
   },
   heroButton: {
     width: 42,
@@ -447,11 +519,11 @@ const styles = StyleSheet.create({
   bookMain: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 16
+    gap: 18
   },
   largeCoverWrap: {
-    width: 140,
-    height: 210,
+    width: 148,
+    height: 222,
     borderRadius: 12,
     overflow: "hidden",
     backgroundColor: colors.surface,
@@ -475,13 +547,13 @@ const styles = StyleSheet.create({
     ...type.label,
     color: colors.accent,
     textTransform: "uppercase",
-    marginBottom: spacing.sm
+    marginBottom: 7
   },
   bookName: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 31,
-    lineHeight: 31
+    fontSize: 32,
+    lineHeight: 32
   },
   bookNameLong: {
     fontSize: 25,
@@ -497,7 +569,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 19,
     marginTop: spacing.xs,
-    marginBottom: spacing.md
+    marginBottom: 11
   },
   metaPills: {
     flexDirection: "row",
@@ -518,30 +590,19 @@ const styles = StyleSheet.create({
     borderColor: "rgba(240,236,228,0.1)",
     overflow: "hidden"
   },
-  heroRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm
-  },
-  heroRatingNumber: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 26,
-    lineHeight: 30
-  },
   actionGrid: {
     flexDirection: "row",
-    gap: 7,
-    marginTop: 16
+    gap: 8,
+    marginTop: 18
   },
   bookAction: {
     flex: 1,
-    minHeight: 60,
-    borderRadius: 17,
+    minHeight: 56,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(255,255,255,0.052)",
     borderWidth: 1,
     borderColor: "rgba(240,236,228,0.1)"
   },
@@ -564,36 +625,34 @@ const styles = StyleSheet.create({
     lineHeight: 12
   },
   body: {
-    paddingTop: spacing.lg
+    paddingTop: spacing.md
   },
   sectionHeader: {
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
     alignItems: "baseline",
     justifyContent: "space-between",
-    marginBottom: spacing.md
+    marginBottom: spacing.sm
   },
   sectionTitle: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 22,
-    lineHeight: 26
+    fontSize: 20,
+    lineHeight: 24
   },
   sectionAction: {
     color: colors.accent,
     fontFamily: fonts.bodyBold,
     fontSize: 12
   },
-  synopsisCard: {
-    minHeight: 112,
-    maxHeight: 124,
+  synopsisBlock: {
+    minHeight: 104,
+    maxHeight: 116,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-    padding: spacing.md,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.045)",
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginBottom: 28,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     overflow: "hidden"
   },
   synopsisOpen: {
@@ -612,126 +671,71 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: 58
   },
-  scoreCard: {
+  ratingSummary: {
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    borderRadius: 24,
+    marginBottom: 30,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md
+  },
+  communityRating: {
     flexDirection: "row",
-    gap: spacing.md,
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderWidth: 1,
-    borderColor: colors.border
+    gap: spacing.md
   },
-  scoreCardSpacing: {
-    marginBottom: spacing.xl
-  },
-  scoreBig: {
-    width: 94,
-    alignItems: "center",
-    paddingRight: spacing.md,
-    borderRightWidth: 1,
-    borderRightColor: colors.border
-  },
-  scoreNumber: {
+  ratingSummaryScore: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 40,
-    lineHeight: 42
+    fontSize: 42,
+    lineHeight: 44
   },
-  scoreCaption: {
+  ratingSummaryCopy: {
+    gap: 4
+  },
+  ratingSummaryText: {
     color: colors.textMuted,
     fontFamily: fonts.bodyBold,
-    fontSize: 11,
-    lineHeight: 13,
-    textAlign: "center",
-    marginTop: spacing.xs
+    fontSize: 12,
+    lineHeight: 15
   },
-  userRatingText: {
-    color: colors.accent,
-    fontFamily: fonts.bodyBold,
-    fontSize: 11,
-    lineHeight: 14,
-    textAlign: "center",
-    marginTop: spacing.sm
-  },
-  personalRatingCard: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-    padding: spacing.md,
-    borderRadius: 22,
+  personalRatingInline: {
+    alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: spacing.md,
-    backgroundColor: colors.accentWash,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "rgba(157,192,216,0.11)",
     borderWidth: 1,
     borderColor: "rgba(157,192,216,0.2)"
   },
-  personalRatingLabel: {
+  personalRatingInlineText: {
     color: colors.text,
     fontFamily: fonts.bodyBold,
-    fontSize: 14,
-    lineHeight: 18
-  },
-  personalRatingText: {
-    color: colors.textMuted,
-    fontFamily: fonts.body,
     fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2
+    lineHeight: 15
   },
-  personalRatingScore: {
-    alignItems: "flex-end"
-  },
-  personalRatingNumber: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 24,
-    lineHeight: 28,
-    marginBottom: 2
-  },
-  bars: {
-    flex: 1,
-    gap: 7
-  },
-  barRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm
-  },
-  barLabel: {
-    width: 48,
-    color: colors.textMuted,
+  deleteRatingText: {
+    color: colors.accent,
     fontFamily: fonts.bodyBold,
-    fontSize: 10
-  },
-  barTrack: {
-    flex: 1,
-    height: 8,
-    borderRadius: 4,
-    overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.07)"
-  },
-  barFill: {
-    height: "100%",
-    borderRadius: 4
+    fontSize: 12,
+    lineHeight: 16
   },
   reviewCard: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.xl,
-    padding: spacing.md,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.045)",
-    borderWidth: 1,
-    borderColor: colors.border
+    marginHorizontal: spacing.lg,
+    marginBottom: 30,
+    paddingLeft: spacing.md,
+    borderLeftWidth: 2,
+    borderLeftColor: "rgba(157,192,216,0.52)"
   },
   reviewTop: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing.md
+    marginBottom: spacing.sm
   },
   avatar: {
     width: 38,
@@ -765,10 +769,10 @@ const styles = StyleSheet.create({
     lineHeight: 15
   },
   reviewText: {
-    color: "#d1c8b8",
+    color: colors.textSoft,
     fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 22,
     marginTop: spacing.sm
   },
   reviewActions: {
@@ -782,20 +786,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 12
   },
-  readMore: {
-    marginLeft: "auto",
-    color: colors.accent,
-    fontFamily: fonts.bodyBold,
-    fontSize: 12
-  },
   emptyReviewCard: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.xl,
+    marginHorizontal: spacing.lg,
+    marginBottom: 30,
     minHeight: 118,
     padding: spacing.md,
-    borderRadius: 24,
+    borderRadius: 18,
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.035)",
+    backgroundColor: "rgba(255,255,255,0.028)",
     borderWidth: 1,
     borderColor: colors.border
   },

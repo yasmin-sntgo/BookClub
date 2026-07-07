@@ -4,12 +4,14 @@ import { FlatList, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View }
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { mockBooks, mockLists } from "../data/mockFeed";
+import { getBooks, getLists } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
 
-const categories = ["Todos", "Classicos", "Chorar", "Ficcao cientifica", "Terror", "Fantasia", "Nacionais"];
+const categories = ["Todos", "Classicos", "Tristes", "Ficcao cientifica", "Terror", "Fantasia", "Nacionais"];
+const mockBooks = getBooks();
+const mockLists = getLists();
 const FEATURED_CARD_WIDTH = 304;
 const FEATURED_CARD_STEP = FEATURED_CARD_WIDTH + spacing.md;
 
@@ -49,10 +51,10 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
               </View>
               <View style={styles.personalCopy}>
                 <Text style={styles.personalTitle}>
-                  {userLists.length ? `${userLists.length} lista publicada` : "Nenhuma lista ainda"}
+                  {userLists.length ? `${userLists.length} lista criada` : "Nenhuma lista ainda"}
                 </Text>
                 <Text style={styles.personalText}>
-                  {userLists.length ? "favoritas, ideias para depois e leituras que voce recomenda." : "quando voce criar pelo +, ela aparece aqui."}
+                  {userLists.length ? "publicas e privadas ficam reunidas aqui." : "Crie sua primeira lista pelo botao +."}
                 </Text>
               </View>
               <Icon name="next" color={colors.textMuted} size={20} strokeWidth={2.1} />
@@ -97,28 +99,35 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
           </ScrollView>
 
           <View style={styles.section}>
-            <SectionHeader title="Salvas por voce" action="Ver todas" />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.savedMiniRail}>
-              {savedLists.map((list) => (
-                <Pressable
-                  accessibilityRole="button"
-                  key={`saved-${list.id}`}
-                  onPress={() => onListOpen?.(list.id)}
-                  style={styles.savedMiniCard}
-                >
-                  <Text style={styles.savedMiniTitle} numberOfLines={2}>{list.title}</Text>
-                  <Text style={styles.savedMiniMeta} numberOfLines={1}>{list.booksCount} livros - {list.handle}</Text>
-                  <View style={styles.savedMiniFooter}>
-                    <Icon name="bookmark" color={colors.accent} size={14} strokeWidth={2} />
-                    <Text style={styles.savedMiniFooterText}>{list.saves} salvos</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </ScrollView>
+            <SectionHeader title="Salvas por voce" />
+            {savedLists.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.savedMiniRail}>
+                {savedLists.map((list) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={`saved-${list.id}`}
+                    onPress={() => onListOpen?.(list.id)}
+                    style={styles.savedMiniCard}
+                  >
+                    <Text style={styles.savedMiniTitle} numberOfLines={2}>{list.title}</Text>
+                    <Text style={styles.savedMiniMeta} numberOfLines={1}>{list.booksCount} livros - {list.handle}</Text>
+                    <View style={styles.savedMiniFooter}>
+                      <Icon name="bookmark" color={colors.accent} size={14} strokeWidth={2} />
+                      <Text style={styles.savedMiniFooterText}>{list.saves} salvos</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>Nenhuma lista salva</Text>
+                <Text style={styles.emptyText}>As listas que voce salvar aparecem aqui.</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
-            <SectionHeader title="Explore Listas" />
+            <SectionHeader title="Explore listas" />
             {exploreLists.map((list) => (
               <ListCard
                 key={list.id}
@@ -131,7 +140,7 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
             {exploreLists.length === 0 ? (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyTitle}>Nada nessa categoria ainda</Text>
-                <Text style={styles.emptyText}>quando alguem criar uma lista daqui, ela aparece no Explore.</Text>
+                <Text style={styles.emptyText}>Tente outra categoria ou veja todas as listas.</Text>
               </View>
             ) : null}
           </View>
@@ -217,7 +226,9 @@ function SavedListCard({ list, books, onBookOpen, onListOpen }) {
     <Pressable accessibilityRole="button" onPress={() => onListOpen?.(list.id)} style={styles.savedCard}>
       <PreviewStack books={books} onBookOpen={onBookOpen} compact />
       <Text style={styles.savedTitle} numberOfLines={2}>{list.title}</Text>
-      <Text style={styles.savedMeta} numberOfLines={1}>{list.booksCount} livros - {list.handle}</Text>
+      <Text style={styles.savedMeta} numberOfLines={1}>
+        {list.private ? "privada" : `${list.booksCount} livros`} - {list.handle}
+      </Text>
     </Pressable>
   );
 }
@@ -250,7 +261,10 @@ function PreviewStack({ books, onBookOpen, compact = false }) {
         <Pressable
           accessibilityRole="button"
           key={`${book.id}-${index}`}
-          onPress={() => onBookOpen?.(book.id)}
+          onPress={(event) => {
+            event.stopPropagation?.();
+            onBookOpen?.(book.id);
+          }}
           style={[styles.previewCover, { marginLeft: index === 0 ? 0 : overlap, zIndex: visibleBooks.length - index }]}
         >
           <BookCover book={book} size={compact ? "small" : "listPreview"} />

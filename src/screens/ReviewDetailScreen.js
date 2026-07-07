@@ -18,14 +18,22 @@ import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks, mockComments, mockReviews, mockUsers } from "../data/mockFeed";
+import { SpoilerText } from "../components/SpoilerText";
+import { TextFeedbackSheet } from "../components/TextFeedbackSheet";
+import { getBooks, getComments, getReviews, getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
+const mockBooks = getBooks();
+const mockComments = getComments();
+const mockReviews = getReviews();
+const mockUsers = getUsers();
+
 export function ReviewDetailScreen({
   reviewId = "review-1",
   comments: availableComments = mockComments,
+  currentUserHandle = "@yasmin_le",
   likedCommentIds = [],
   likedReviewIds = [],
   saved = false,
@@ -33,18 +41,26 @@ export function ReviewDetailScreen({
   onBack,
   onBookOpen,
   onCommentCreate,
+  onCommentDelete,
+  onCommentEdit,
   onCreate,
   onNavigate,
+  onReviewDelete,
+  onReviewEdit,
+  onSpoilerReveal,
   onToggleCommentLike,
   onToggleReviewLike,
   onToggleSave,
-  onUserOpen
+  onUserOpen,
+  revealedSpoilerReviewIds = []
 }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [commentText, setCommentText] = useState("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [commentMenuVisible, setCommentMenuVisible] = useState(false);
+  const [selectedComment, setSelectedComment] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
   const [notice, setNotice] = useState("");
   const commentInputRef = useRef(null);
   const review = reviews.find((item) => item.id === reviewId) ?? reviews[0] ?? mockReviews[0];
@@ -54,6 +70,7 @@ export function ReviewDetailScreen({
     [availableComments, review.id]
   );
   const likedByMe = likedReviewIds.includes(review.id);
+  const isOwnReview = review.local || review.handle === currentUserHandle;
   const reviewLikeCount = review.likes + (likedByMe && !review.liked ? 1 : 0) - (!likedByMe && review.liked ? 1 : 0);
 
   function focusComposer() {
@@ -76,6 +93,8 @@ export function ReviewDetailScreen({
     setCommentText("");
     setReplyingTo(null);
     setNotice("Comentario publicado.");
+    commentInputRef.current?.blur();
+    Keyboard.dismiss();
   }
 
   async function shareReview() {
@@ -96,6 +115,18 @@ export function ReviewDetailScreen({
     }
   }
 
+  async function copyReviewLink() {
+    const reviewLink = `bookclub://resenhas/${review.id}`;
+
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(reviewLink);
+      setNotice("Link da resenha copiado.");
+      return;
+    }
+
+    setNotice(`Link da resenha: ${reviewLink}`);
+  }
+
   useEffect(() => {
     const showSubscription = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
     const hideSubscription = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
@@ -105,6 +136,15 @@ export function ReviewDetailScreen({
       hideSubscription.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => setNotice(""), 2200);
+    return () => clearTimeout(timeout);
+  }, [notice]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -140,7 +180,13 @@ export function ReviewDetailScreen({
               </View>
             </Pressable>
 
-            <Text style={styles.reviewText}>{review.text}</Text>
+            <SpoilerText
+              hasSpoiler={review.hasSpoiler}
+              onReveal={() => onSpoilerReveal?.(review.id)}
+              revealed={revealedSpoilerReviewIds.includes(review.id)}
+              text={review.text}
+              style={styles.reviewText}
+            />
             <Text style={styles.metaLine}>{review.postedAt} - {review.views} visualizacoes</Text>
 
             <View style={styles.actions}>
@@ -167,7 +213,9 @@ export function ReviewDetailScreen({
                   size={19}
                   strokeWidth={2}
                 />
-                <Text style={[styles.actionText, saved && { color: colors.accent }]}>salvar</Text>
+                <Text style={[styles.actionText, saved && { color: colors.accent }]}>
+                  {saved ? "salva" : "salvar"}
+                </Text>
               </Pressable>
               <View style={styles.actionSpacer} />
               <Pressable
@@ -198,7 +246,7 @@ export function ReviewDetailScreen({
                   liked={liked}
                   likes={likes}
                   onLike={() => onToggleCommentLike?.(comment.id)}
-                  onMenu={() => setCommentMenuVisible(true)}
+                  onMenu={() => setSelectedComment(comment)}
                   onReply={() => startReply(comment.user)}
                   onUserOpen={onUserOpen}
                 />
@@ -220,10 +268,24 @@ export function ReviewDetailScreen({
         <ActionSheet
           visible={menuVisible}
           title="Opcoes da resenha"
-          options={[saved ? "Remover dos salvos" : "Salvar resenha", "Compartilhar resenha", "Denunciar resenha"]}
+          options={[
+            ...(isOwnReview ? ["Editar resenha", "Apagar resenha"] : []),
+            saved ? "Remover dos salvos" : "Salvar resenha",
+            "Compartilhar resenha",
+            "Copiar link",
+            ...(!isOwnReview ? ["Denunciar resenha"] : [])
+          ]}
           onClose={() => setMenuVisible(false)}
           onSelect={(option) => {
             setMenuVisible(false);
+            if (option === "Editar resenha") {
+              setEditTarget({ type: "review", id: review.id, text: review.text });
+              return;
+            }
+            if (option === "Apagar resenha") {
+              onReviewDelete?.(review.id);
+              return;
+            }
             if (option === "Salvar resenha" || option === "Remover dos salvos") {
               onToggleSave?.(review.id);
               setNotice(saved ? "Resenha removida dos salvos." : "Resenha salva.");
@@ -233,17 +295,70 @@ export function ReviewDetailScreen({
               shareReview();
               return;
             }
-            setNotice("Denuncia registrada neste exemplo.");
+            if (option === "Copiar link") {
+              copyReviewLink();
+              return;
+            }
+            setReportTarget({ type: "review", id: review.id });
           }}
         />
         <ActionSheet
-          visible={commentMenuVisible}
+          visible={Boolean(selectedComment)}
           title="Opcoes do comentario"
-          options={["Denunciar comentario"]}
-          onClose={() => setCommentMenuVisible(false)}
-          onSelect={() => {
-            setCommentMenuVisible(false);
-            setNotice("Denuncia do comentario registrada neste exemplo.");
+          options={
+            selectedComment?.handle === currentUserHandle
+            || selectedComment?.local
+              ? ["Editar comentario", "Apagar comentario", "Denunciar comentario"]
+              : ["Denunciar comentario"]
+          }
+          onClose={() => setSelectedComment(null)}
+          onSelect={(option) => {
+            const commentId = selectedComment?.id;
+
+            setSelectedComment(null);
+            if (option === "Editar comentario" && commentId) {
+              setEditTarget({ type: "comment", id: commentId, text: selectedComment?.text ?? "" });
+              return;
+            }
+
+            if (option === "Apagar comentario" && commentId) {
+              onCommentDelete?.(commentId);
+              setNotice("Comentario apagado.");
+              return;
+            }
+
+            setReportTarget({ type: "comment", id: commentId });
+          }}
+        />
+        <TextFeedbackSheet
+          visible={Boolean(editTarget)}
+          title={editTarget?.type === "comment" ? "Editar comentario" : "Editar resenha"}
+          description={editTarget?.type === "comment" ? "Ajuste o texto do seu comentario." : "Ajuste o texto da sua resenha."}
+          initialText={editTarget?.text ?? ""}
+          placeholder={editTarget?.type === "comment" ? "Escreva o comentario..." : "Escreva a resenha..."}
+          submitLabel="Salvar"
+          onClose={() => setEditTarget(null)}
+          onSubmit={(text) => {
+            if (editTarget?.type === "comment") {
+              onCommentEdit?.(editTarget.id, text);
+              setNotice("Comentario editado.");
+            } else if (editTarget?.type === "review") {
+              onReviewEdit?.(editTarget.id, text);
+              setNotice("Resenha editada.");
+            }
+            setEditTarget(null);
+          }}
+        />
+        <TextFeedbackSheet
+          visible={Boolean(reportTarget)}
+          title={reportTarget?.type === "comment" ? "Denunciar comentario" : "Denunciar resenha"}
+          description="Explique o motivo da denuncia para analise."
+          placeholder="Descreva o problema..."
+          submitLabel="Registrar"
+          onClose={() => setReportTarget(null)}
+          onSubmit={() => {
+            setReportTarget(null);
+            setNotice("Denuncia registrada.");
           }}
         />
         {notice ? (
@@ -285,13 +400,27 @@ function CommentCard({ comment, liked, likes, onLike, onMenu, onReply, onUserOpe
           <Text style={styles.authorName}>{comment.user}</Text>
           <Text style={styles.authorHandle}>{comment.handle} - {comment.time}</Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={onMenu} style={styles.commentMenu}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={(event) => {
+            event.stopPropagation?.();
+            onMenu?.();
+          }}
+          style={styles.commentMenu}
+        >
           <Icon name="more" color={colors.textMuted} size={18} />
         </Pressable>
       </Pressable>
       <Text style={styles.commentText}>{comment.text}</Text>
       <View style={styles.commentActions}>
-        <Pressable accessibilityRole="button" onPress={onLike} style={styles.commentLike}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={(event) => {
+            event.stopPropagation?.();
+            onLike?.();
+          }}
+          style={styles.commentLike}
+        >
           <Icon
             name="heart"
             color={liked ? "#d96060" : colors.textMuted}
@@ -302,7 +431,12 @@ function CommentCard({ comment, liked, likes, onLike, onMenu, onReply, onUserOpe
             {likes}
           </Text>
         </Pressable>
-        <Pressable onPress={onReply}>
+        <Pressable
+          onPress={(event) => {
+            event.stopPropagation?.();
+            onReply?.();
+          }}
+        >
           <Text style={styles.replyText}>responder</Text>
         </Pressable>
       </View>

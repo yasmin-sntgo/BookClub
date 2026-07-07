@@ -22,15 +22,7 @@ import { ReviewDetailScreen } from "../screens/ReviewDetailScreen";
 import { SearchScreen } from "../screens/SearchScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { ShelfScreen } from "../screens/ShelfScreen";
-import { mockComments, mockLists, mockNotifications, mockReviews } from "../data/mockFeed";
-
-const initialShelfEntries = [
-  { bookId: "dune", status: "reading", favorite: true },
-  { bookId: "it", status: "reading", favorite: false },
-  { bookId: "sunrise", status: "want", favorite: false },
-  { bookId: "hobbit", status: "read", favorite: true },
-  { bookId: "housemaid", status: "abandoned", favorite: false }
-];
+import { useLists, useNotifications, useProfile, useReviews, useShelf } from "../hooks";
 
 export function AppNavigator() {
   const [screen, setScreen] = useState("login");
@@ -38,44 +30,79 @@ export function AppNavigator() {
   const [selectedBookId, setSelectedBookId] = useState("dune");
   const [selectedCreateBookId, setSelectedCreateBookId] = useState(null);
   const [selectedListId, setSelectedListId] = useState("before-die");
+  const [editingListId, setEditingListId] = useState(null);
   const [selectedReviewId, setSelectedReviewId] = useState("review-1");
   const [selectedShelfBookId, setSelectedShelfBookId] = useState(null);
   const [selectedShelfUserId, setSelectedShelfUserId] = useState("lia");
   const [selectedUserId, setSelectedUserId] = useState("lia");
   const [selectedConnectionsUserId, setSelectedConnectionsUserId] = useState("yasmin");
-  const [profileOverride, setProfileOverride] = useState(null);
   const [homeInitialTab, setHomeInitialTab] = useState("books");
   const [profileInitialTab, setProfileInitialTab] = useState("Resenhas");
   const [searchInitialTab, setSearchInitialTab] = useState("Livros");
   const [searchQuery, setSearchQuery] = useState("");
   const [connectionsInitialTab, setConnectionsInitialTab] = useState("Seguidores");
+  const [interactionsInitialTab, setInteractionsInitialTab] = useState("Curtidas");
+  const [shelfInitialFilter, setShelfInitialFilter] = useState("Todos");
   const [createOrigin, setCreateOrigin] = useState("home");
   const [bookOrigin, setBookOrigin] = useState("home");
   const [listOrigin, setListOrigin] = useState("lists");
   const [reviewOrigin, setReviewOrigin] = useState("reviews");
-  const [savedListIds, setSavedListIds] = useState(["crying", "sci-fi-start"]);
-  const [savedReviewIds, setSavedReviewIds] = useState([]);
-  const [shelfPrivate, setShelfPrivate] = useState(false);
-  const [followedUserIds, setFollowedUserIds] = useState(["carol"]);
-  const [likedReviewIds, setLikedReviewIds] = useState(
-    mockReviews.filter((review) => review.liked).map((review) => review.id)
-  );
-  const [likedCommentIds, setLikedCommentIds] = useState(
-    mockComments.filter((comment) => comment.liked).map((comment) => comment.id)
-  );
-  const [shelfEntries, setShelfEntries] = useState(initialShelfEntries);
-  const [createdLists, setCreatedLists] = useState([]);
-  const [createdReviews, setCreatedReviews] = useState([]);
-  const [createdRatings, setCreatedRatings] = useState([]);
-  const [createdComments, setCreatedComments] = useState([]);
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const {
+    currentUserHandle,
+    followedUserIds,
+    profileOverride,
+    registeredAccount,
+    registerAccount,
+    saveProfile,
+    toggleFollow
+  } = useProfile();
+  const {
+    saveShelfEntry: persistShelfEntry,
+    setBookShelfStatus,
+    setShelfPrivate,
+    shelfEntries,
+    shelfPrivate,
+    toggleBookFavorite
+  } = useShelf();
+  const {
+    createList,
+    deleteList,
+    editList,
+    lists: allLists,
+    savedListIds,
+    setListPrivacy,
+    toggleListSave
+  } = useLists({ currentUserHandle, profileOverride });
+  const {
+    allComments,
+    allReviews,
+    createdRatings,
+    deleteComment,
+    deleteRating,
+    deleteReview,
+    editComment,
+    editReview,
+    likedCommentIds,
+    likedReviewIds,
+    revealSpoilerReview,
+    revealedSpoilerReviewIds,
+    savedReviewIds,
+    saveCreatedComment,
+    saveCreatedReview: persistCreatedReview,
+    toggleCommentLike,
+    toggleReviewLike,
+    toggleReviewSave
+  } = useReviews({ currentUserHandle, profileOverride });
+  const {
+    markAllNotificationsRead,
+    markNotificationRead,
+    notificationPreferences,
+    notifications: visibleNotifications,
+    readNotificationIds,
+    toggleNotificationPreference,
+    unreadNotificationsCount
+  } = useNotifications();
   const [history, setHistory] = useState([]);
-  const allLists = [...createdLists, ...mockLists];
-  const allReviews = [...createdReviews, ...mockReviews];
-  const allComments = [...createdComments, ...mockComments];
-  const unreadNotificationsCount = mockNotifications.filter(
-    (notification) => !notification.read && !readNotificationIds.includes(notification.id)
-  ).length;
 
   function currentRoute(overrides = {}) {
     return {
@@ -93,6 +120,8 @@ export function AppNavigator() {
       searchInitialTab,
       searchQuery,
       connectionsInitialTab,
+      interactionsInitialTab,
+      shelfInitialFilter,
       createOrigin,
       bookOrigin,
       listOrigin,
@@ -115,6 +144,8 @@ export function AppNavigator() {
     setSearchInitialTab(route.searchInitialTab ?? "Livros");
     setSearchQuery(route.searchQuery ?? "");
     setConnectionsInitialTab(route.connectionsInitialTab ?? "Seguidores");
+    setInteractionsInitialTab(route.interactionsInitialTab ?? "Curtidas");
+    setShelfInitialFilter(route.shelfInitialFilter ?? "Todos");
     setCreateOrigin(route.createOrigin ?? "home");
     setBookOrigin(route.bookOrigin ?? "home");
     setListOrigin(route.listOrigin ?? "lists");
@@ -141,6 +172,16 @@ export function AppNavigator() {
   function navigateRoot(nextScreen) {
     setHistory([]);
     setCreateOpen(false);
+    if (nextScreen === "home") {
+      setHomeInitialTab("books");
+    }
+    if (nextScreen === "library") {
+      setShelfInitialFilter("Todos");
+    }
+    if (nextScreen === "search") {
+      setSearchInitialTab("Livros");
+      setSearchQuery("");
+    }
     setScreen(nextScreen);
   }
 
@@ -203,6 +244,7 @@ export function AppNavigator() {
 
   function openInteractions(previousRoute = currentRoute()) {
     pushRoute(previousRoute);
+    setInteractionsInitialTab("Curtidas");
     setScreen("interactions");
   }
 
@@ -231,6 +273,14 @@ export function AppNavigator() {
 
   function openCreateList(previousRoute = currentRoute()) {
     setCreateOpen(false);
+    setEditingListId(null);
+    pushRoute(previousRoute);
+    setScreen("createList");
+  }
+
+  function openEditList(listId, previousRoute = currentRoute()) {
+    setCreateOpen(false);
+    setEditingListId(listId);
     pushRoute(previousRoute);
     setScreen("createList");
   }
@@ -294,110 +344,10 @@ export function AppNavigator() {
     }
   }
 
-  function markNotificationRead(notificationId) {
-    setReadNotificationIds((current) =>
-      current.includes(notificationId) ? current : [...current, notificationId]
-    );
-  }
-
-  function markAllNotificationsRead() {
-    setReadNotificationIds(mockNotifications.map((notification) => notification.id));
-  }
-
-  function toggleListSave(listId) {
-    setSavedListIds((current) =>
-      current.includes(listId)
-        ? current.filter((savedListId) => savedListId !== listId)
-        : [...current, listId]
-    );
-  }
-
-  function toggleReviewSave(reviewId) {
-    setSavedReviewIds((current) =>
-      current.includes(reviewId)
-        ? current.filter((savedReviewId) => savedReviewId !== reviewId)
-        : [...current, reviewId]
-    );
-  }
-
-  function toggleFollow(userId) {
-    if (userId === "yasmin") {
-      return;
-    }
-
-    setFollowedUserIds((current) =>
-      current.includes(userId)
-        ? current.filter((followedUserId) => followedUserId !== userId)
-        : [...current, userId]
-    );
-  }
-
-  function toggleReviewLike(reviewId) {
-    setLikedReviewIds((current) =>
-      current.includes(reviewId)
-        ? current.filter((likedReviewId) => likedReviewId !== reviewId)
-        : [...current, reviewId]
-    );
-  }
-
-  function toggleCommentLike(commentId) {
-    setLikedCommentIds((current) =>
-      current.includes(commentId)
-        ? current.filter((likedCommentId) => likedCommentId !== commentId)
-        : [...current, commentId]
-    );
-  }
-
   function saveShelfEntry(nextEntry) {
-    setShelfEntries((current) => {
-      const alreadyExists = current.some((entry) => entry.bookId === nextEntry.bookId);
-
-      if (!alreadyExists) {
-        return [...current, nextEntry];
-      }
-
-      return current.map((entry) =>
-        entry.bookId === nextEntry.bookId ? { ...entry, ...nextEntry } : entry
-      );
-    });
+    persistShelfEntry(nextEntry);
     setSelectedShelfBookId(null);
     navigateRoot("library");
-  }
-
-  function setBookShelfStatus(bookId, statusLabel) {
-    const statusByLabel = {
-      Lendo: "reading",
-      "Quero ler": "want",
-      Lido: "read",
-      Abandonado: "abandoned"
-    };
-    const nextStatus = statusByLabel[statusLabel] ?? "want";
-
-    setShelfEntries((current) => {
-      const existingEntry = current.find((entry) => entry.bookId === bookId);
-
-      if (!existingEntry) {
-        return [...current, { bookId, status: nextStatus, favorite: false }];
-      }
-
-      return current.map((entry) =>
-        entry.bookId === bookId ? { ...entry, status: nextStatus } : entry
-      );
-    });
-  }
-
-  function toggleBookFavorite(bookId) {
-    setShelfEntries((current) => {
-      const existingEntry = current.find((entry) => entry.bookId === bookId);
-
-      if (!existingEntry) {
-        return [...current, { bookId, status: "want", favorite: true }];
-      }
-
-      return current.map((entry) =>
-        entry.bookId === bookId ? { ...entry, favorite: !entry.favorite } : entry
-      );
-    });
   }
 
   function openSearchByGenre(genre, previousRoute = currentRoute()) {
@@ -408,25 +358,18 @@ export function AppNavigator() {
   }
 
   function saveCreatedList(listDraft) {
-    const nextList = {
-      id: `user-list-${createdLists.length + 1}`,
-      local: true,
-      title: listDraft.title,
-      creator: "Yasmin",
-      handle: "@yasmin_le",
-      description: listDraft.description || "lista criada por voce no BookClub.",
-      booksCount: listDraft.bookIds.length,
-      saves: "0",
-      createdAt: "2026",
-      updatedAt: "criada agora",
-      ordered: listDraft.ordered,
-      private: listDraft.private,
-      creatorNote: listDraft.creatorNote || "Sem nota do criador por enquanto.",
-      tag: listDraft.tag,
-      bookIds: listDraft.bookIds
-    };
+    if (listDraft.id) {
+      const nextList = editList(listDraft);
 
-    setCreatedLists((current) => [nextList, ...current]);
+      setSelectedListId(nextList.id);
+      setEditingListId(null);
+      setHistory((current) => current.slice(0, -1));
+      setScreen("listDetail");
+      return;
+    }
+
+    const nextList = createList(listDraft);
+
     setSelectedListId(nextList.id);
     setListOrigin("lists");
     setHistory([]);
@@ -434,75 +377,18 @@ export function AppNavigator() {
   }
 
   function saveCreatedReview(reviewDraft) {
-    if (reviewDraft.mode === "rating") {
-      const ratingHandle = profileOverride?.handle || "@yasmin_le";
-      const nextRating = {
-        local: true,
-        user: "Yasmin",
-        handle: ratingHandle,
-        avatar: profileOverride?.avatar || "Y",
-        time: "agora",
-        bookId: reviewDraft.bookId,
-        rating: reviewDraft.rating
-      };
+    const result = persistCreatedReview(reviewDraft);
 
-      setCreatedRatings((current) => {
-        const existingRating = current.find(
-          (ratingItem) => ratingItem.bookId === reviewDraft.bookId && ratingItem.handle === ratingHandle
-        );
-
-        if (existingRating) {
-          return current.map((ratingItem) =>
-            ratingItem.id === existingRating.id ? { ...ratingItem, ...nextRating } : ratingItem
-          );
-        }
-
-        return [{ ...nextRating, id: `user-rating-${current.length + 1}` }, ...current];
-      });
-      setSelectedBookId(reviewDraft.bookId);
+    if (result.type === "rating") {
+      setSelectedBookId(result.bookId);
       setHistory((current) => current.slice(0, -1));
       setScreen(createOrigin === "bookRatings" ? "bookRatings" : "book");
       return;
     }
 
-    const nextReview = {
-      id: `user-review-${createdReviews.length + 1}`,
-      local: true,
-      user: profileOverride?.name || "Yasmin",
-      handle: profileOverride?.handle || "@yasmin_le",
-      avatar: profileOverride?.avatar || "Y",
-      time: "agora",
-      postedAt: "agora - 14/06/2026",
-      views: "0",
-      bookId: reviewDraft.bookId,
-      rating: reviewDraft.rating,
-      text: reviewDraft.hasSpoiler ? `[spoiler] ${reviewDraft.text}` : reviewDraft.text,
-      likes: 0,
-      comments: 0,
-      liked: false,
-      hasSpoiler: reviewDraft.hasSpoiler
-    };
-
-    setCreatedReviews((current) => [nextReview, ...current]);
-    setSelectedReviewId(nextReview.id);
+    setSelectedReviewId(result.reviewId);
     setHomeInitialTab("reviews");
     setScreen("review");
-  }
-
-  function saveCreatedComment(commentDraft) {
-    const nextComment = {
-      id: `user-comment-${createdComments.length + 1}`,
-      reviewId: commentDraft.reviewId,
-      user: profileOverride?.name || "Yasmin",
-      handle: profileOverride?.handle || "@yasmin_le",
-      avatar: profileOverride?.avatar || "Y",
-      time: "agora",
-      text: commentDraft.replyingTo ? `@${commentDraft.replyingTo} ${commentDraft.text}` : commentDraft.text,
-      likes: 0,
-      liked: false
-    };
-
-    setCreatedComments((current) => [nextComment, ...current]);
   }
 
   function withCreateSheet(content) {
@@ -517,7 +403,10 @@ export function AppNavigator() {
   if (screen === "register") {
     return (
       <RegisterScreen
-        onCreateAccount={() => goHome("books")}
+        onCreateAccount={(account) => {
+          registerAccount(account);
+          navigateRoot("login");
+        }}
         onLogin={() => navigateRoot("login")}
       />
     );
@@ -531,6 +420,7 @@ export function AppNavigator() {
         followedUserIds={followedUserIds}
         initialTab={homeInitialTab}
         likedReviewIds={likedReviewIds}
+        revealedSpoilerReviewIds={revealedSpoilerReviewIds}
         savedReviewIds={savedReviewIds}
         onBookOpen={(bookId, tab = "books") => {
           setHomeInitialTab(tab);
@@ -546,6 +436,7 @@ export function AppNavigator() {
         onTabChange={setHomeInitialTab}
         onToggleReviewLike={toggleReviewLike}
         onToggleReviewSave={toggleReviewSave}
+        onSpoilerReveal={revealSpoilerReview}
         onUserOpen={(userId) => openUser(userId, currentRoute({ screen: "home", homeInitialTab }))}
         unreadNotificationsCount={unreadNotificationsCount}
       />
@@ -555,10 +446,14 @@ export function AppNavigator() {
   if (screen === "library") {
     return withCreateSheet(
       <ShelfScreen
+        initialFilter={shelfInitialFilter}
         shelfEntries={shelfEntries}
         onAddToShelf={() => openAddToShelf(null, currentRoute({ screen: "library" }))}
-        onBookOpen={(bookId) => openBook(bookId, "library", currentRoute({ screen: "library" }))}
+        onBookOpen={(bookId) =>
+          openBook(bookId, "library", currentRoute({ screen: "library", shelfInitialFilter }))
+        }
         onCreate={() => setCreateOpen(true)}
+        onFilterChange={setShelfInitialFilter}
         onNavigate={navigateRoot}
       />
     );
@@ -614,6 +509,8 @@ export function AppNavigator() {
   if (screen === "createList") {
     return withCreateSheet(
       <CreateListScreen
+        key={editingListId ?? "new-list"}
+        list={editingListId ? allLists.find((list) => list.id === editingListId) : null}
         onBack={() => goBack(() => navigateRoot("lists"))}
         onCreate={() => setCreateOpen(true)}
         onNavigate={navigateRoot}
@@ -634,7 +531,15 @@ export function AppNavigator() {
           openBook(bookId, "listDetail", currentRoute({ screen: "listDetail", selectedListId }))
         }
         onCreate={() => setCreateOpen(true)}
+        onDelete={(listId) => {
+          deleteList(listId);
+          goBack(() => navigateRoot("lists"));
+        }}
+        onEdit={(listId) =>
+          openEditList(listId, currentRoute({ screen: "listDetail", selectedListId }))
+        }
         onNavigate={navigateRoot}
+        onPrivacyChange={setListPrivacy}
         onToggleSave={toggleListSave}
       />
     );
@@ -643,7 +548,7 @@ export function AppNavigator() {
   if (screen === "notifications") {
     return withCreateSheet(
       <NotificationsScreen
-        notifications={mockNotifications}
+        notifications={visibleNotifications}
         readNotificationIds={readNotificationIds}
         onBack={() => goBack(() => goHome(homeInitialTab))}
         onBookOpen={(bookId) => openBook(bookId, "notifications", currentRoute({ screen: "notifications" }))}
@@ -668,6 +573,8 @@ export function AppNavigator() {
         ratings={createdRatings}
         reviews={allReviews}
         comments={allComments}
+        likedReviewIds={likedReviewIds}
+        revealedSpoilerReviewIds={revealedSpoilerReviewIds}
         shelfEntry={shelfEntries.find((entry) => entry.bookId === selectedBookId)}
         onBack={() => goBack(() => goToOrigin(bookOrigin))}
         onAddToShelf={(bookId) =>
@@ -693,6 +600,8 @@ export function AppNavigator() {
         onReviewsOpen={(bookId) =>
           openBookReviews(bookId, currentRoute({ screen: "book", selectedBookId }))
         }
+        onRatingDelete={(bookId) => deleteRating(bookId)}
+        onSpoilerReveal={revealSpoilerReview}
         onSearchGenre={(genre) =>
           openSearchByGenre(genre, currentRoute({ screen: "book", selectedBookId }))
         }
@@ -730,6 +639,9 @@ export function AppNavigator() {
       <BookReviewsScreen
         key={selectedBookId}
         bookId={selectedBookId}
+        comments={allComments}
+        likedReviewIds={likedReviewIds}
+        revealedSpoilerReviewIds={revealedSpoilerReviewIds}
         reviews={allReviews}
         onBack={() => goBack(goToBook)}
         onCreate={() => setCreateOpen(true)}
@@ -737,6 +649,7 @@ export function AppNavigator() {
           openCreateReview(bookId, "review", "bookReviews", currentRoute({ screen: "bookReviews", selectedBookId }))
         }
         onNavigate={navigateRoot}
+        onSpoilerReveal={revealSpoilerReview}
         onReviewOpen={(reviewId) =>
           openReview(reviewId, "bookReviews", currentRoute({ screen: "bookReviews", selectedBookId }))
         }
@@ -767,6 +680,7 @@ export function AppNavigator() {
         likedReviewIds={likedReviewIds}
         saved={savedReviewIds.includes(selectedReviewId)}
         comments={allComments}
+        currentUserHandle={currentUserHandle}
         reviews={allReviews}
         onBack={() => goBack(() => goToReviewOrigin(reviewOrigin))}
         onBookOpen={(bookId) =>
@@ -774,7 +688,16 @@ export function AppNavigator() {
         }
         onCreate={() => setCreateOpen(true)}
         onCommentCreate={saveCreatedComment}
+        onCommentDelete={deleteComment}
+        onCommentEdit={editComment}
         onNavigate={navigateRoot}
+        onReviewDelete={(reviewId) => {
+          deleteReview(reviewId);
+          goBack(() => goHome("reviews"));
+        }}
+        onReviewEdit={editReview}
+        onSpoilerReveal={revealSpoilerReview}
+        revealedSpoilerReviewIds={revealedSpoilerReviewIds}
         onToggleCommentLike={toggleCommentLike}
         onToggleReviewLike={toggleReviewLike}
         onToggleSave={toggleReviewSave}
@@ -825,6 +748,7 @@ export function AppNavigator() {
   if (screen === "interactions") {
     return withCreateSheet(
       <InteractionsScreen
+        initialTab={interactionsInitialTab}
         likedCommentIds={likedCommentIds}
         likedReviewIds={likedReviewIds}
         comments={allComments}
@@ -834,15 +758,16 @@ export function AppNavigator() {
         savedReviewIds={savedReviewIds}
         onBack={() => goBack(() => goHome(homeInitialTab))}
         onBookOpen={(bookId) =>
-          openBook(bookId, "interactions", currentRoute({ screen: "interactions" }))
+          openBook(bookId, "interactions", currentRoute({ screen: "interactions", interactionsInitialTab }))
         }
         onCreate={() => setCreateOpen(true)}
         onListOpen={(listId) =>
-          openList(listId, "interactions", currentRoute({ screen: "interactions" }))
+          openList(listId, "interactions", currentRoute({ screen: "interactions", interactionsInitialTab }))
         }
         onNavigate={navigateRoot}
+        onTabChange={setInteractionsInitialTab}
         onReviewOpen={(reviewId, origin = "reviews") =>
-          openReview(reviewId, origin, currentRoute({ screen: "interactions" }))
+          openReview(reviewId, origin, currentRoute({ screen: "interactions", interactionsInitialTab }))
         }
       />
     );
@@ -867,9 +792,11 @@ export function AppNavigator() {
   if (screen === "settings") {
     return withCreateSheet(
       <SettingsScreen
+        notificationPreferences={notificationPreferences}
         onBack={() => goBack(() => goHome(homeInitialTab))}
         onCreate={() => setCreateOpen(true)}
         onNavigate={navigateRoot}
+        onNotificationPreferenceChange={toggleNotificationPreference}
         onShelfPrivacyChange={setShelfPrivate}
         shelfPrivate={shelfPrivate}
       />
@@ -883,7 +810,7 @@ export function AppNavigator() {
         onCreate={() => setCreateOpen(true)}
         onNavigate={navigateRoot}
         onSave={(nextProfile) => {
-          setProfileOverride(nextProfile);
+          saveProfile(nextProfile);
           goBack(() => goHome(homeInitialTab));
         }}
         profileOverride={profileOverride}
@@ -898,9 +825,12 @@ export function AppNavigator() {
         initialTab={connectionsInitialTab}
         onBack={() => goBack(() => goHome(homeInitialTab))}
         onCreate={() => setCreateOpen(true)}
+        followedUserIds={followedUserIds}
         onNavigate={navigateRoot}
+        onTabChange={setConnectionsInitialTab}
+        onToggleFollow={toggleFollow}
         onUserOpen={(userId) =>
-          openUser(userId, currentRoute({ screen: "connections", selectedConnectionsUserId }))
+          openUser(userId, currentRoute({ screen: "connections", selectedConnectionsUserId, connectionsInitialTab }))
         }
       />
     );
@@ -908,6 +838,8 @@ export function AppNavigator() {
 
   return (
     <LoginScreen
+      accountNotice={registeredAccount ? "Conta criada. Entre com seu e-mail e senha para continuar." : ""}
+      initialEmail={registeredAccount?.email ?? ""}
       onCreateAccount={() => navigateRoot("register")}
       onLogin={() => goHome("books")}
     />

@@ -1,28 +1,55 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { mockUsers } from "../data/mockFeed";
+import { getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
+const bioLimit = 140;
+const mockUsers = getUsers();
+
 export function EditProfileScreen({ onBack, onCreate, onNavigate, onSave, profileOverride }) {
   const baseUser = mockUsers.find((item) => item.id === "yasmin") ?? mockUsers[0];
   const user = profileOverride ? { ...baseUser, ...profileOverride } : baseUser;
-  const [avatar, setAvatar] = useState(user.avatar);
+  const [avatar, setAvatar] = useState((user.avatar || "Y").slice(0, 1).toUpperCase());
   const [name, setName] = useState(user.name);
   const [handle, setHandle] = useState(user.handle.replace("@", ""));
   const [bio, setBio] = useState(user.bio);
 
+  const cleanedHandle = sanitizeHandle(handle);
+  const previewName = name.trim() || user.name;
+  const previewHandle = cleanedHandle || user.handle.replace("@", "");
+  const previewBio = bio.trim() || "Leituras, resenhas e listas no BookClub.";
+
+  useEffect(() => {
+    setAvatar((user.avatar || "").slice(0, 1).toUpperCase());
+    setName(user.name);
+    setHandle(user.handle.replace("@", ""));
+    setBio(user.bio);
+  }, [user.avatar, user.bio, user.handle, user.name]);
+
   function handleSave() {
     onSave?.({
       avatar: avatar.trim().slice(0, 1).toUpperCase() || user.avatar,
-      name: name.trim() || user.name,
-      handle: `@${handle.replace("@", "").trim() || user.handle.replace("@", "")}`,
+      name: previewName,
+      handle: `@${previewHandle}`,
       bio: bio.trim()
     });
+  }
+
+  function updateAvatar(text) {
+    setAvatar(text.trim().slice(0, 1).toUpperCase());
+  }
+
+  function updateHandle(text) {
+    setHandle(sanitizeHandle(text));
+  }
+
+  function updateBio(text) {
+    setBio(text.slice(0, bioLimit));
   }
 
   return (
@@ -39,20 +66,19 @@ export function EditProfileScreen({ onBack, onCreate, onNavigate, onSave, profil
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.avatarSection}>
+          <View style={styles.identityBlock}>
             <View style={styles.avatarPreview}>
-              <Text style={styles.avatarPreviewText}>{(avatar.trim()[0] || user.avatar).toUpperCase()}</Text>
+              <Text style={styles.avatarPreviewText}>{avatar}</Text>
             </View>
-            <View style={styles.avatarCopy}>
-              <Text style={styles.avatarTitle}>Avatar</Text>
+            <View style={styles.identityCopy}>
+              <Text style={styles.identityTitle}>Avatar</Text>
               <View style={styles.avatarInputWrap}>
+                <Text style={styles.avatarInputLabel}>Caractere</Text>
                 <TextInput
                   value={avatar}
-                  onChangeText={setAvatar}
+                  onChangeText={updateAvatar}
                   maxLength={1}
                   autoCapitalize="characters"
-                  placeholder="Y"
-                  placeholderTextColor={colors.textMuted}
                   style={styles.avatarInput}
                 />
               </View>
@@ -65,21 +91,26 @@ export function EditProfileScreen({ onBack, onCreate, onNavigate, onSave, profil
               value={name}
               onChangeText={setName}
               placeholder="Seu nome"
+              maxLength={36}
             />
             <Field
               label="Usuario"
               value={handle}
-              onChangeText={(text) => setHandle(text.replace("@", ""))}
+              onChangeText={updateHandle}
               placeholder="usuario"
               prefix="@"
               autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={24}
+              helper="Use letras, numeros, ponto ou underline."
             />
             <Field
               label="Bio"
               value={bio}
-              onChangeText={setBio}
+              onChangeText={updateBio}
               placeholder="Escreva uma bio curta"
               multiline
+              helper={`${bio.length}/${bioLimit}`}
             />
           </View>
 
@@ -87,16 +118,14 @@ export function EditProfileScreen({ onBack, onCreate, onNavigate, onSave, profil
             <Text style={styles.previewLabel}>Previa</Text>
             <View style={styles.previewRow}>
               <View style={styles.previewAvatar}>
-                <Text style={styles.previewAvatarText}>{(avatar.trim()[0] || user.avatar).toUpperCase()}</Text>
+                <Text style={styles.previewAvatarText}>{avatar}</Text>
               </View>
               <View style={styles.previewCopy}>
-                <Text style={styles.previewName} numberOfLines={1}>{name.trim() || user.name}</Text>
-                <Text style={styles.previewHandle} numberOfLines={1}>
-                  @{handle.replace("@", "").trim() || user.handle.replace("@", "")}
-                </Text>
+                <Text style={styles.previewName} numberOfLines={1}>{previewName}</Text>
+                <Text style={styles.previewHandle} numberOfLines={1}>@{previewHandle}</Text>
               </View>
             </View>
-            <Text style={styles.previewBio}>{bio.trim() || "Sem bio por enquanto."}</Text>
+            <Text style={styles.previewBio}>{previewBio}</Text>
           </View>
         </ScrollView>
 
@@ -106,10 +135,21 @@ export function EditProfileScreen({ onBack, onCreate, onNavigate, onSave, profil
   );
 }
 
-function Field({ label, prefix, multiline = false, style, ...inputProps }) {
+function sanitizeHandle(value) {
+  return value
+    .replace("@", "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._]/g, "")
+    .slice(0, 24);
+}
+
+function Field({ label, prefix, helper, multiline = false, style, ...inputProps }) {
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.fieldHeader}>
+        <Text style={styles.label}>{label}</Text>
+        {helper ? <Text style={styles.helper}>{helper}</Text> : null}
+      </View>
       <View style={[styles.inputWrap, multiline && styles.textAreaWrap]}>
         {prefix ? <Text style={styles.prefix}>{prefix}</Text> : null}
         <TextInput
@@ -187,16 +227,22 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: 120
   },
-  avatarSection: {
+  identityBlock: {
+    minHeight: 118,
+    borderRadius: 28,
+    padding: spacing.md,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.lg,
-    marginBottom: spacing.lg
+    gap: spacing.md,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm
   },
   avatarPreview: {
-    width: 94,
-    height: 94,
-    borderRadius: 32,
+    width: 92,
+    height: 92,
+    borderRadius: 34,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#1d1a16",
@@ -214,32 +260,40 @@ const styles = StyleSheet.create({
     fontSize: 42,
     lineHeight: 46
   },
-  avatarCopy: {
+  identityCopy: {
     flex: 1,
     minWidth: 0
   },
-  avatarTitle: {
+  identityTitle: {
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 22,
-    lineHeight: 26,
-    marginBottom: spacing.sm
+    fontSize: 23,
+    lineHeight: 27
   },
   avatarInputWrap: {
-    width: 74,
-    minHeight: 46,
-    borderRadius: 18,
+    alignSelf: "flex-start",
+    minHeight: 42,
+    borderRadius: 17,
+    paddingLeft: spacing.sm,
+    paddingRight: 6,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.045)",
+    backgroundColor: "rgba(0,0,0,0.2)",
     borderWidth: 1,
     borderColor: colors.border
   },
+  avatarInputLabel: {
+    color: colors.textMuted,
+    fontFamily: fonts.bodyBold,
+    fontSize: 11,
+    marginRight: spacing.sm
+  },
   avatarInput: {
-    width: "100%",
+    width: 42,
     color: colors.text,
     fontFamily: fonts.display,
-    fontSize: 22,
+    fontSize: 20,
+    lineHeight: 24,
     textAlign: "center",
     paddingVertical: 0
   },
@@ -255,11 +309,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border
   },
+  fieldHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    marginBottom: spacing.sm
+  },
   label: {
     color: colors.textSoft,
     fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    marginBottom: spacing.sm
+    fontSize: 12
+  },
+  helper: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+    lineHeight: 14,
+    textAlign: "right",
+    flexShrink: 1
   },
   inputWrap: {
     minHeight: 48,
@@ -272,7 +340,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(240,236,228,0.08)"
   },
   textAreaWrap: {
-    minHeight: 132,
+    minHeight: 120,
     alignItems: "flex-start",
     paddingTop: spacing.md
   },
@@ -291,7 +359,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0
   },
   textArea: {
-    minHeight: 104,
+    minHeight: 92,
     fontFamily: fonts.body,
     lineHeight: 22
   },

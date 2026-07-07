@@ -3,19 +3,23 @@ import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "rea
 
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
-import { mockUsers } from "../data/mockFeed";
+import { getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
 const tabs = ["Seguidores", "Seguindo"];
+const mockUsers = getUsers();
 
 export function ConnectionsScreen({
+  followedUserIds = [],
   userId = "yasmin",
   initialTab = "Seguidores",
   onBack,
   onCreate,
   onNavigate,
+  onTabChange,
+  onToggleFollow,
   onUserOpen
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -24,7 +28,7 @@ export function ConnectionsScreen({
     () => Object.fromEntries(mockUsers.map((item) => [item.id, item])),
     []
   );
-  const ids = activeTab === "Seguidores" ? user.followerIds ?? [] : user.followingIds ?? [];
+  const ids = getConnectionIds({ activeTab, followedUserIds, user });
   const people = ids.map((id) => usersById[id]).filter(Boolean);
 
   useEffect(() => {
@@ -50,7 +54,10 @@ export function ConnectionsScreen({
             <Pressable
               key={tab}
               accessibilityRole="button"
-              onPress={() => setActiveTab(tab)}
+              onPress={() => {
+                setActiveTab(tab);
+                onTabChange?.(tab);
+              }}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
@@ -62,15 +69,19 @@ export function ConnectionsScreen({
           {people.length > 0 ? (
             <View style={styles.peopleList}>
               {people.map((person) => (
-                <UserRow key={person.id} user={person} onPress={() => onUserOpen?.(person.id)} />
+                <UserRow
+                  key={person.id}
+                  followed={followedUserIds.includes(person.id)}
+                  user={person}
+                  onFollow={() => onToggleFollow?.(person.id)}
+                  onPress={() => onUserOpen?.(person.id)}
+                />
               ))}
             </View>
           ) : (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Nada por aqui</Text>
-              <Text style={styles.emptyText}>
-                Quando houver usuarios em {activeTab.toLowerCase()}, eles aparecem nesta lista.
-              </Text>
+              <Text style={styles.emptyText}>Nenhum perfil nesta lista.</Text>
             </View>
           )}
         </ScrollView>
@@ -81,7 +92,17 @@ export function ConnectionsScreen({
   );
 }
 
-function UserRow({ user, onPress }) {
+function getConnectionIds({ activeTab, followedUserIds, user }) {
+  if (activeTab === "Seguindo" && user.id === "yasmin") {
+    return followedUserIds;
+  }
+
+  return activeTab === "Seguidores" ? user.followerIds ?? [] : user.followingIds ?? [];
+}
+
+function UserRow({ followed = false, user, onFollow, onPress }) {
+  const isCurrentUser = user.id === "yasmin";
+
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.userRow}>
       <View style={styles.avatar}>
@@ -91,9 +112,17 @@ function UserRow({ user, onPress }) {
         <Text style={styles.userName} numberOfLines={1}>{user.name}</Text>
         <Text style={styles.userMeta} numberOfLines={2}>{user.handle} - {user.bio}</Text>
       </View>
-      <Pressable accessibilityRole="button" style={[styles.followButton, user.isFollowing && styles.followingButton]}>
-        <Text style={[styles.followText, user.isFollowing && styles.followingText]}>
-          {user.isFollowing ? "Seguindo" : "Seguir"}
+      <Pressable
+        accessibilityRole="button"
+        disabled={isCurrentUser}
+        onPress={(event) => {
+          event.stopPropagation?.();
+          onFollow?.();
+        }}
+        style={[styles.followButton, followed && styles.followingButton, isCurrentUser && styles.selfButton]}
+      >
+        <Text style={[styles.followText, followed && styles.followingText, isCurrentUser && styles.selfText]}>
+          {isCurrentUser ? "Voce" : followed ? "Seguindo" : "Seguir"}
         </Text>
       </Pressable>
     </Pressable>
@@ -254,6 +283,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.035)",
     borderColor: colors.border
   },
+  selfButton: {
+    backgroundColor: "rgba(255,255,255,0.025)",
+    borderColor: "rgba(240,236,228,0.08)"
+  },
   followText: {
     color: colors.text,
     fontFamily: fonts.bodyBold,
@@ -261,6 +294,9 @@ const styles = StyleSheet.create({
   },
   followingText: {
     color: colors.textSoft
+  },
+  selfText: {
+    color: colors.textMuted
   },
   empty: {
     minHeight: 148,

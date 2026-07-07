@@ -1,24 +1,32 @@
 import { useMemo } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks, mockComments, mockReviews, mockUsers } from "../data/mockFeed";
+import { SpoilerText } from "../components/SpoilerText";
+import { getBooks, getComments, getReviews, getUsers } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
+const mockBooks = getBooks();
+const mockComments = getComments();
+const mockReviews = getReviews();
+const mockUsers = getUsers();
+
 export function BookReviewsScreen({
   bookId = "dune",
   comments = mockComments,
+  likedReviewIds = [],
+  revealedSpoilerReviewIds = [],
   reviews = mockReviews,
   onBack,
   onCreate,
   onCreateReview,
   onNavigate,
   onReviewOpen,
+  onSpoilerReveal,
   onUserOpen
 }) {
   const book = mockBooks.find((item) => item.id === bookId) ?? mockBooks[1];
@@ -44,25 +52,6 @@ export function BookReviewsScreen({
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.summaryCard}>
-            <BookCover book={book} size="medium" />
-            <View style={styles.summaryText}>
-              <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
-              <Text style={styles.bookAuthor} numberOfLines={1}>{book.author}</Text>
-              <View style={styles.scoreLine}>
-                <Text style={styles.scoreNumber}>{book.rating}</Text>
-                <RatingStars rating={book.rating} size={14} />
-              </View>
-              <Text style={styles.countText}>
-                {bookReviews.length === 1 ? "1 resenha publicada" : `${bookReviews.length} resenhas publicadas`}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recentes</Text>
-          </View>
-
           {bookReviews.length > 0 ? (
             <View style={styles.reviewList}>
               {bookReviews.map((review) => (
@@ -70,7 +59,10 @@ export function BookReviewsScreen({
                   key={review.id}
                   review={review}
                   commentCount={countReviewComments(review, comments)}
+                  liked={likedReviewIds.includes(review.id)}
+                  spoilerRevealed={revealedSpoilerReviewIds.includes(review.id)}
                   onReviewOpen={onReviewOpen}
+                  onSpoilerReveal={() => onSpoilerReveal?.(review.id)}
                   onUserOpen={onUserOpen}
                 />
               ))}
@@ -78,7 +70,7 @@ export function BookReviewsScreen({
           ) : (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>Ainda nao tem resenhas</Text>
-              <Text style={styles.emptyText}>Quando alguem escrever sobre este livro, aparece aqui.</Text>
+              <Text style={styles.emptyText}>Seja a primeira pessoa a puxar conversa sobre este livro.</Text>
             </View>
           )}
         </ScrollView>
@@ -89,8 +81,9 @@ export function BookReviewsScreen({
   );
 }
 
-function ReviewRow({ review, commentCount, onReviewOpen, onUserOpen }) {
+function ReviewRow({ review, commentCount, liked, spoilerRevealed, onReviewOpen, onSpoilerReveal, onUserOpen }) {
   const userId = mockUsers.find((user) => user.handle === review.handle)?.id ?? "lia";
+  const likeCount = getReviewLikeCount(review, liked);
 
   return (
     <Pressable accessibilityRole="button" onPress={() => onReviewOpen?.(review.id)} style={styles.reviewRow}>
@@ -111,9 +104,16 @@ function ReviewRow({ review, commentCount, onReviewOpen, onUserOpen }) {
         </View>
       </Pressable>
       <RatingStars rating={review.rating} size={14} />
-      <Text style={styles.reviewText} numberOfLines={3}>{review.text}</Text>
+      <SpoilerText
+        hasSpoiler={review.hasSpoiler}
+        onReveal={onSpoilerReveal}
+        revealed={spoilerRevealed}
+        text={review.text}
+        style={styles.reviewText}
+        numberOfLines={2}
+      />
       <View style={styles.reviewMeta}>
-        <Text style={styles.metaText}>{review.likes} curtidas</Text>
+        <Text style={styles.metaText}>{likeCount} curtidas</Text>
         <Text style={styles.metaText}>{commentCount} respostas</Text>
         <Text style={styles.readMore}>abrir</Text>
       </View>
@@ -123,6 +123,10 @@ function ReviewRow({ review, commentCount, onReviewOpen, onUserOpen }) {
 
 function countReviewComments(review, comments) {
   return comments.filter((comment) => comment.reviewId === review.id).length || review.comments;
+}
+
+function getReviewLikeCount(review, liked) {
+  return review.likes + (liked && !review.liked ? 1 : 0) - (!liked && review.liked ? 1 : 0);
 }
 
 const styles = StyleSheet.create({
@@ -186,60 +190,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: 112,
     gap: spacing.md
-  },
-  summaryCard: {
-    flexDirection: "row",
-    gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.035)"
-  },
-  summaryText: {
-    flex: 1,
-    justifyContent: "center"
-  },
-  bookTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 24,
-    lineHeight: 28
-  },
-  bookAuthor: {
-    color: colors.textSoft,
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 3
-  },
-  scoreLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginTop: spacing.sm
-  },
-  scoreNumber: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 28,
-    lineHeight: 32
-  },
-  countText: {
-    color: colors.textMuted,
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2
-  },
-  sectionHeader: {
-    marginTop: spacing.sm
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 22,
-    lineHeight: 26
   },
   reviewList: {
     borderTopWidth: 1,

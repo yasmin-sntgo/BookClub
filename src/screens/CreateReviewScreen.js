@@ -5,10 +5,12 @@ import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
 import { RatingStars } from "../components/RatingStars";
-import { mockBooks } from "../data/mockFeed";
+import { getBooks } from "../services";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
+
+const mockBooks = getBooks();
 
 export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onCreate, onNavigate, onSave }) {
   const [activeMode, setActiveMode] = useState(mode);
@@ -27,6 +29,15 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
     setSelectedBookId(bookId);
     setNotice("");
   }, [bookId, mode]);
+
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => setNotice(""), 2200);
+    return () => clearTimeout(timeout);
+  }, [notice]);
 
   function handleSave() {
     if (!book) {
@@ -129,7 +140,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
 
           {isReviewMode ? (
             <>
-              <SectionHeader title="Texto" action="opcional no modo avaliar" />
+              <SectionHeader title="Texto" action="obrigatorio" />
               <View style={styles.writeCard}>
                 <TextInput
                   multiline
@@ -142,7 +153,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
                 />
                 <View style={styles.counter}>
                   <Text style={styles.counterText}>{text.length} caracteres</Text>
-                  <Text style={styles.counterText}>sem limite</Text>
+                  <Text style={styles.counterText}>{hasSpoiler ? "com spoiler" : "sem spoiler"}</Text>
                 </View>
               </View>
             </>
@@ -237,7 +248,7 @@ function BookPicker({ visible, selectedBookId, onClose, onSelect }) {
         <View style={styles.pickerSheet}>
           <View style={styles.handle} />
           <Text style={styles.pickerTitle}>Escolher livro</Text>
-          <Text style={styles.pickerSubtitle}>Por enquanto a busca usa os livros de exemplo do app.</Text>
+          <Text style={styles.pickerSubtitle}>Busque pelo titulo, autor ou genero do livro.</Text>
           <View style={styles.pickerSearch}>
             <Icon name="search" color={colors.textMuted} size={20} />
             <TextInput
