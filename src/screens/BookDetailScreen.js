@@ -160,25 +160,6 @@ export function BookDetailScreen({
               ) : null}
             </Pressable>
 
-            <SectionHeader title="Avaliacoes" action="Ver todas" onAction={() => onRatingsOpen?.(book.id)} />
-            <View style={styles.ratingSummary}>
-              <View style={styles.communityRating}>
-                <Text style={styles.ratingSummaryScore}>{book.rating}</Text>
-                <View style={styles.ratingSummaryCopy}>
-                  <RatingStars rating={book.rating} size={15} />
-                  <Text style={styles.ratingSummaryText}>{book.ratingsCount} avaliacoes da comunidade</Text>
-                </View>
-              </View>
-              {userRating ? (
-                <View style={styles.personalRatingInline}>
-                  <Text style={styles.personalRatingInlineText}>sua nota {userRating.rating}.0</Text>
-                  <Pressable accessibilityRole="button" onPress={() => onRatingDelete?.(book.id)} hitSlop={8}>
-                    <Text style={styles.deleteRatingText}>apagar</Text>
-                  </Pressable>
-                </View>
-              ) : null}
-            </View>
-
             <SectionHeader
               title="Vozes sobre o livro"
               action={review ? "Todas" : undefined}
@@ -196,10 +177,27 @@ export function BookDetailScreen({
               />
             ) : (
               <View style={styles.emptyReviewCard}>
-                <Text style={styles.emptyReviewTitle}>Ainda nao tem vozes por aqui</Text>
-                <Text style={styles.emptyReviewText}>Seja a primeira pessoa a puxar conversa sobre este livro.</Text>
+                <Text style={styles.emptyReviewTitle}>Seja a primeira pessoa a escrever uma resenha.</Text>
               </View>
             )}
+
+            <SectionHeader title="Avaliacoes" action="Ver todas" onAction={() => onRatingsOpen?.(book.id)} />
+            <View style={styles.ratingSummary}>
+              <View style={styles.communityRating}>
+                <Text style={styles.ratingSummaryScore}>{book.rating}</Text>
+                <View style={styles.ratingSummaryCopy}>
+                  <RatingStars rating={book.rating} size={15} />
+                </View>
+              </View>
+              {userRating ? (
+                <View style={styles.personalRatingInline}>
+                  <Text style={styles.personalRatingInlineText}>sua nota {userRating.rating}.0</Text>
+                  <Pressable accessibilityRole="button" onPress={() => onRatingDelete?.(book.id)} hitSlop={8}>
+                    <Text style={styles.deleteRatingText}>apagar</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
 
             <SectionHeader
               title="Semelhantes"
@@ -222,7 +220,7 @@ export function BookDetailScreen({
         <OptionSheet
           visible={shelfOpen}
           title="Adicionar a estante"
-          subtitle="Escolha como este livro entra na sua biblioteca."
+          subtitle="Marcar leitura"
           options={shelfOptions}
           onSelect={(option) => {
             onShelfStatusChange?.(book.id, option);
@@ -233,7 +231,7 @@ export function BookDetailScreen({
         <OptionSheet
           visible={moreOpen}
           title="Mais opcoes"
-          subtitle="Acoes secundarias deste livro."
+          subtitle="Livro"
           options={moreOptions}
           onSelect={async (option) => {
             if (option === "Compartilhar livro") {
@@ -335,7 +333,6 @@ function Hero({ book, shelfEntry, userRating, onBack, onCreateReview, onMore, on
           <View style={styles.metaPills}>
             <Text style={styles.metaPill}>{book.year}</Text>
             <Text style={styles.metaPill}>{book.pages} paginas</Text>
-            <Text style={styles.metaPill}>{book.publisher}</Text>
           </View>
         </View>
       </View>
@@ -694,12 +691,6 @@ const styles = StyleSheet.create({
   ratingSummaryCopy: {
     gap: 4
   },
-  ratingSummaryText: {
-    color: colors.textMuted,
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    lineHeight: 15
-  },
   personalRatingInline: {
     alignSelf: "flex-start",
     flexDirection: "row",
@@ -802,13 +793,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 14,
     lineHeight: 18
-  },
-  emptyReviewText: {
-    color: colors.textMuted,
-    fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 5
   },
   similarRail: {
     paddingHorizontal: spacing.lg,

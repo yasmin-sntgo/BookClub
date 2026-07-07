@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
@@ -43,7 +43,6 @@ export function HomeScreen({
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [reviewFilterMode, setReviewFilterMode] = useState("all");
-  const [notice, setNotice] = useState("");
   const booksById = useMemo(
     () => Object.fromEntries(mockBooks.map((book) => [book.id, book])),
     []
@@ -52,33 +51,6 @@ export function HomeScreen({
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
-
-  useEffect(() => {
-    if (!notice) {
-      return undefined;
-    }
-
-    const timeout = setTimeout(() => setNotice(""), 2200);
-    return () => clearTimeout(timeout);
-  }, [notice]);
-
-  async function shareFeedReview(review, book) {
-    setNotice("Abrindo compartilhamento...");
-    try {
-      const result = await Share.share({
-        message: `${review.user} resenhou ${book.title} no BookClub: ${review.text}\nbookclub://resenhas/${review.id}`
-      });
-
-      if (result?.action === Share.dismissedAction) {
-        setNotice("Compartilhamento cancelado.");
-        return;
-      }
-
-      setNotice("Resenha pronta para compartilhar.");
-    } catch (error) {
-      setNotice(`Resenha: bookclub://resenhas/${review.id}`);
-    }
-  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -118,7 +90,6 @@ export function HomeScreen({
               booksById={booksById}
               onBookOpen={onBookOpen}
               onReviewOpen={onReviewOpen}
-              onShareReview={shareFeedReview}
               onToggleReviewLike={onToggleReviewLike}
               onToggleReviewSave={onToggleReviewSave}
               onSpoilerReveal={onSpoilerReveal}
@@ -126,13 +97,7 @@ export function HomeScreen({
             />
           )}
         </ScrollView>
-
         <BottomNav activeTab="home" onChange={onNavigate} onCreate={onCreate} />
-        {notice ? (
-          <View style={styles.noticeToast}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -172,22 +137,17 @@ function BooksPanel({ books, onBookOpen }) {
       <BookRail
         title="Popular agora"
         action={expandedRails.includes("Popular agora") ? null : "Ver todos"}
-        books={expandedRails.includes("Popular agora") ? books : books.slice(0, 4)}
+        books={expandedRails.includes("Popular agora") ? books : books.slice(0, 5)}
+        featured
         onAction={() => toggleRail("Popular agora")}
         onBookOpen={onBookOpen}
       />
       <BookRail
         title="Novos no clube"
         action={expandedRails.includes("Novos no clube") ? null : "Ver todos"}
-        books={expandedRails.includes("Novos no clube") ? [...books].reverse() : [...books].reverse().slice(0, 4)}
+        books={expandedRails.includes("Novos no clube") ? [...books].reverse() : [...books].reverse().slice(0, 6)}
+        compact
         onAction={() => toggleRail("Novos no clube")}
-        onBookOpen={onBookOpen}
-      />
-      <BookRail
-        title="Mais comentados"
-        action={expandedRails.includes("Mais comentados") ? null : "Ver todos"}
-        books={expandedRails.includes("Mais comentados") ? [books[1], books[3], books[0], books[4], books[2], books[5]] : [books[1], books[3], books[0], books[4]]}
-        onAction={() => toggleRail("Mais comentados")}
         onBookOpen={onBookOpen}
       />
       <BookGrid title="Explore livros" books={[...books, ...books].map((book, index) => ({
@@ -198,7 +158,7 @@ function BooksPanel({ books, onBookOpen }) {
   );
 }
 
-function BookRail({ title, action, books, onAction, onBookOpen }) {
+function BookRail({ title, action, books, compact = false, featured = false, onAction, onBookOpen }) {
   return (
     <View style={styles.railSection}>
       <SectionHeader title={title} action={action} onAction={onAction} />
@@ -208,8 +168,12 @@ function BookRail({ title, action, books, onAction, onBookOpen }) {
         contentContainerStyle={styles.bookRail}
       >
         {books.map((book) => (
-            <Pressable key={`${title}-${book.id}`} onPress={() => onBookOpen?.(book.id, "books")} style={styles.bookItem}>
-            <BookCover book={book} size="medium" />
+          <Pressable
+            key={`${title}-${book.id}`}
+            onPress={() => onBookOpen?.(book.id, "books")}
+            style={[styles.bookItem, compact && styles.compactBookItem, featured && styles.featuredBookItem]}
+          >
+            <BookCover book={book} size={compact ? "small" : "medium"} />
             <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
             <Text style={styles.bookAuthor} numberOfLines={1}>{book.author}</Text>
           </Pressable>
@@ -251,7 +215,6 @@ function ReviewsPanel({
   booksById,
   onBookOpen,
   onReviewOpen,
-  onShareReview,
   onToggleReviewLike,
   onToggleReviewSave,
   onSpoilerReveal,
@@ -281,7 +244,6 @@ function ReviewsPanel({
           commentCount={countReviewComments(review, comments)}
           onBookOpen={onBookOpen}
           onReviewOpen={onReviewOpen}
-          onShareReview={onShareReview}
           onToggleLike={() => onToggleReviewLike?.(review.id)}
           onToggleSave={() => onToggleReviewSave?.(review.id)}
           onSpoilerReveal={() => onSpoilerReveal?.(review.id)}
@@ -321,7 +283,7 @@ function ReviewFilterTabs({ filterMode = "all", onChange }) {
   );
 }
 
-function ReviewPost({ review, book, liked, saved, spoilerRevealed, commentCount, onBookOpen, onReviewOpen, onShareReview, onSpoilerReveal, onToggleLike, onToggleSave, onUserOpen }) {
+function ReviewPost({ review, book, liked, saved, spoilerRevealed, commentCount, onBookOpen, onReviewOpen, onSpoilerReveal, onToggleLike, onToggleSave, onUserOpen }) {
   const userId = findUserId(review.handle);
   const likeCount = review.likes + (liked && !review.liked ? 1 : 0) - (!liked && review.liked ? 1 : 0);
 
@@ -388,16 +350,6 @@ function ReviewPost({ review, book, liked, saved, spoilerRevealed, commentCount,
           activeColor={colors.accent}
           onPress={onToggleSave}
         />
-        <Pressable
-          accessibilityRole="button"
-          onPress={(event) => {
-            event.stopPropagation?.();
-            onShareReview?.(review, book);
-          }}
-          style={styles.secondaryAction}
-        >
-          <Icon name="share" color={colors.textMuted} size={16} strokeWidth={2} />
-        </Pressable>
       </View>
     </Pressable>
   );
@@ -597,6 +549,12 @@ const styles = StyleSheet.create({
   bookItem: {
     width: 112
   },
+  featuredBookItem: {
+    width: 124
+  },
+  compactBookItem: {
+    width: 74
+  },
   gridBookItem: {
     width: "31%"
   },
@@ -779,25 +737,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
-  noticeToast: {
-    position: "absolute",
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: 96,
-    minHeight: 44,
-    borderRadius: 18,
-    paddingHorizontal: spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(22,22,22,0.96)",
-    borderWidth: 1,
-    borderColor: colors.border
-  },
-  noticeText: {
-    color: colors.textSoft,
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    lineHeight: 17,
-    textAlign: "center"
-  }
 });

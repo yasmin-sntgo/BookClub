@@ -214,21 +214,21 @@ function BooksSearch({
         </View>
       ) : null}
 
-      <View style={styles.section}>
-        <SectionHeader
-          title={showDiscovery ? "Livros em alta" : "Resultados"}
-        />
-        <View style={styles.bookGrid}>
-          {visibleBooks.map((book) => (
-            <Pressable key={book.id} onPress={() => onBookOpen?.(book.id)} style={styles.bookItem}>
-              <BookCover book={book} size="grid" />
-              <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
-              <Text style={styles.bookAuthor} numberOfLines={1}>{book.author}</Text>
-            </Pressable>
-          ))}
+      {!showDiscovery ? (
+        <View style={styles.section}>
+          <SectionHeader title="Resultados" />
+          <View style={styles.bookGrid}>
+            {visibleBooks.map((book) => (
+              <Pressable key={book.id} onPress={() => onBookOpen?.(book.id)} style={styles.bookItem}>
+                <BookCover book={book} size="grid" />
+                <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
+                <Text style={styles.bookAuthor} numberOfLines={1}>{book.author}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {visibleBooks.length === 0 ? <EmptyResults text="Nenhum livro encontrado." /> : null}
         </View>
-        {visibleBooks.length === 0 ? <EmptyResults text="Nenhum livro encontrado." /> : null}
-      </View>
+      ) : null}
     </>
   );
 }

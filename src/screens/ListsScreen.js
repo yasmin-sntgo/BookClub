@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { FlatList, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
@@ -12,8 +12,6 @@ import { fonts, type } from "../theme/typography";
 const categories = ["Todos", "Classicos", "Tristes", "Ficcao cientifica", "Terror", "Fantasia", "Nacionais"];
 const mockBooks = getBooks();
 const mockLists = getLists();
-const FEATURED_CARD_WIDTH = 304;
-const FEATURED_CARD_STEP = FEATURED_CARD_WIDTH + spacing.md;
 
 export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, onCreate, onListOpen, onNavigate }) {
   const [activeCategory, setActiveCategory] = useState("Todos");
@@ -84,30 +82,19 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
           </View>
 
           <View style={styles.section}>
-            <SectionHeader title="Destaques do dia" />
-            <FeaturedCarousel
-              lists={publicLists}
-              booksById={booksById}
-              onBookOpen={onBookOpen}
-              onListOpen={onListOpen}
-            />
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moodRail}>
-            {categories.map((category) => (
-              <Pressable
-                accessibilityRole="button"
-                key={category}
-                onPress={() => setActiveCategory(category)}
-                style={[styles.moodChip, activeCategory === category && styles.activeMoodChip]}
-              >
-                <Text style={[styles.moodText, activeCategory === category && styles.activeMoodText]}>{category}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          <View style={styles.section}>
             <SectionHeader title="Explore listas" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moodRail}>
+              {categories.map((category) => (
+                <Pressable
+                  accessibilityRole="button"
+                  key={category}
+                  onPress={() => setActiveCategory(category)}
+                  style={[styles.moodChip, activeCategory === category && styles.activeMoodChip]}
+                >
+                  <Text style={[styles.moodText, activeCategory === category && styles.activeMoodText]}>{category}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
             {exploreLists.map((list) => (
               <ListCard
                 key={list.id}
@@ -127,75 +114,6 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
         <BottomNav activeTab="lists" onChange={onNavigate} onCreate={onCreate} />
       </View>
     </SafeAreaView>
-  );
-}
-
-function FeaturedCarousel({ lists, booksById, onBookOpen, onListOpen }) {
-  const carouselRef = useRef(null);
-  const carouselLists = lists.length > 1 ? [...lists, ...lists, ...lists] : lists;
-  const middleStartIndex = lists.length;
-
-  function handleMomentumEnd(event) {
-    if (lists.length <= 1) return;
-
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / FEATURED_CARD_STEP);
-    const originalIndex = index % lists.length;
-
-    if (index < lists.length) {
-      carouselRef.current?.scrollToIndex({ index: middleStartIndex + originalIndex, animated: false });
-    }
-
-    if (index >= lists.length * 2) {
-      carouselRef.current?.scrollToIndex({ index: middleStartIndex + originalIndex, animated: false });
-    }
-  }
-
-  return (
-    <FlatList
-      ref={carouselRef}
-      horizontal
-      data={carouselLists}
-      keyExtractor={(item, index) => `featured-${item.id}-${index}`}
-      renderItem={({ item }) => (
-        <FeaturedListCard
-          list={item}
-          books={item.bookIds.map((bookId) => booksById[bookId]).filter(Boolean)}
-          onBookOpen={onBookOpen}
-          onListOpen={onListOpen}
-        />
-      )}
-      ItemSeparatorComponent={() => <View style={styles.featuredGap} />}
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.featuredRail}
-      initialScrollIndex={lists.length > 1 ? middleStartIndex : 0}
-      getItemLayout={(_, index) => ({
-        length: FEATURED_CARD_STEP,
-        offset: FEATURED_CARD_STEP * index,
-        index
-      })}
-      onMomentumScrollEnd={handleMomentumEnd}
-      onScrollToIndexFailed={({ index }) => {
-        requestAnimationFrame(() => {
-          carouselRef.current?.scrollToIndex({ index, animated: false });
-        });
-      }}
-      snapToInterval={FEATURED_CARD_STEP}
-      decelerationRate="fast"
-    />
-  );
-}
-
-function FeaturedListCard({ list, books, onBookOpen, onListOpen }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={() => onListOpen?.(list.id)} style={styles.featuredCard}>
-      <View style={styles.featuredTop}>
-        <Text style={styles.featuredHandle}>{list.handle}</Text>
-      </View>
-      <Text style={styles.heroTitle} numberOfLines={2}>{list.title}</Text>
-      <Text style={styles.heroText} numberOfLines={2}>{list.description}</Text>
-      <PreviewStack books={books} onBookOpen={onBookOpen} />
-    </Pressable>
   );
 }
 
@@ -319,75 +237,6 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: spacing.lg,
     paddingBottom: 120
-  },
-  hero: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: "rgba(240,236,228,0.1)",
-    backgroundColor: "rgba(255,255,255,0.045)",
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 16 },
-    shadowRadius: 28,
-    elevation: 10
-  },
-  featuredRail: {
-    paddingHorizontal: spacing.lg
-  },
-  featuredGap: {
-    width: spacing.md
-  },
-  featuredCard: {
-    width: FEATURED_CARD_WIDTH,
-    minHeight: 282,
-    padding: spacing.lg,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: "rgba(240,236,228,0.1)",
-    backgroundColor: "rgba(255,255,255,0.045)",
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 16 },
-    shadowRadius: 28,
-    elevation: 10
-  },
-  featuredTop: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "center",
-    gap: spacing.sm
-  },
-  featuredHandle: {
-    color: colors.textMuted,
-    fontFamily: fonts.bodyBold,
-    fontSize: 11,
-    lineHeight: 14,
-    maxWidth: 112,
-    textAlign: "left",
-    marginBottom: spacing.sm
-  },
-  heroKicker: {
-    ...type.label,
-    color: colors.accent,
-    textTransform: "uppercase",
-    marginBottom: spacing.sm
-  },
-  heroTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 26,
-    lineHeight: 29
-  },
-  heroText: {
-    color: colors.textSoft,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: spacing.sm,
-    marginBottom: spacing.md
   },
   moodRail: {
     paddingHorizontal: spacing.lg,

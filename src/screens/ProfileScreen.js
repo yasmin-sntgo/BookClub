@@ -251,9 +251,6 @@ export function ProfileScreen({
             {visibleActivities.length === 0 ? (
               <View style={styles.emptyActivity}>
                 <Text style={styles.emptyActivityTitle}>Nada por aqui ainda</Text>
-                <Text style={styles.emptyActivityText}>
-                  As proximas atividades dessa aba ficam reunidas neste espaco.
-                </Text>
               </View>
             ) : null}
           </View>
@@ -673,13 +670,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 14,
     lineHeight: 18
-  },
-  emptyActivityText: {
-    color: colors.textMuted,
-    fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 5
   },
   activityLabel: {
     color: colors.text,
