@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { AppToast } from "../components/AppToast";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
 import { colors } from "../theme/colors";
@@ -30,7 +31,7 @@ export function SettingsScreen({
   function toggleShelfPrivacy() {
     const nextValue = !shelfPrivate;
     onShelfPrivacyChange?.(nextValue);
-    setNotice(nextValue ? "Sua estante agora esta privada." : "Sua estante agora esta publica.");
+    setNotice(nextValue ? "Sua estante agora está privada." : "Sua estante agora está pública.");
   }
 
   function toggleNotificationPreference(preferenceId, label) {
@@ -46,7 +47,7 @@ export function SettingsScreen({
           <Pressable accessibilityRole="button" onPress={onBack} style={styles.headerButton}>
             <Icon name="back" color={colors.textSoft} size={24} strokeWidth={2.4} />
           </Pressable>
-          <Text style={styles.title}>Configuracoes</Text>
+          <Text style={styles.title}>Configurações</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -55,35 +56,31 @@ export function SettingsScreen({
             <Text style={styles.sectionTitle}>Privacidade</Text>
             <SettingRow
               title="Estante privada"
-              description="Quando estiver ativa, o botao de estante no seu perfil nao mostra seus livros para outras pessoas."
+              description="Quando estiver ativa, o botão de estante no seu perfil não mostra seus livros para outras pessoas."
               active={shelfPrivate}
               onPress={toggleShelfPrivacy}
             />
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notificacoes</Text>
+            <Text style={styles.sectionTitle}>Notificações</Text>
             <SettingRow
               title="Atividade social"
-              description="Curtidas, comentarios, respostas e novos seguidores."
+              description="Curtidas, comentários, respostas e novos seguidores."
               active={notificationPreferences.social}
-              onPress={() => toggleNotificationPreference("social", "Notificacoes sociais")}
+              onPress={() => toggleNotificationPreference("social", "Notificações sociais")}
             />
             <SettingRow
               title="Listas e livros"
               description="Avisos sobre listas salvas e novidades em livros marcados."
               active={notificationPreferences.books}
-              onPress={() => toggleNotificationPreference("books", "Notificacoes de listas e livros")}
+              onPress={() => toggleNotificationPreference("books", "Notificações de listas e livros")}
             />
           </View>
         </ScrollView>
 
         <BottomNav activeTab="home" onChange={onNavigate} onCreate={onCreate} />
-        {notice ? (
-          <View style={styles.noticeToast}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
+        <AppToast message={notice} />
       </View>
     </SafeAreaView>
   );

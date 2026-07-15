@@ -9,7 +9,7 @@ import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
-const tabs = ["Curtidas", "Comentarios", "Salvos"];
+const tabs = ["Curtidas", "Comentários", "Salvos"];
 const currentUserHandle = "@yasmin_le";
 const mockBooks = getBooks();
 const mockComments = getComments();
@@ -64,8 +64,8 @@ export function InteractionsScreen({
 
       return {
         id: `comment-${comment.id}`,
-        kind: "Comentario",
-        title: review ? booksById[review.bookId]?.title : "Comentario",
+        kind: "Comentário",
+        title: review ? booksById[review.bookId]?.title : "Comentário",
         book: review ? booksById[review.bookId] : null,
         meta: comment.user,
         text: comment.text,
@@ -148,11 +148,11 @@ export function InteractionsScreen({
                   onOpen={item.onOpen}
                 />
               ))}
-              {likedItems.length === 0 ? <EmptyState text="Quando voce curtir resenhas ou comentarios, eles aparecem aqui." /> : null}
+              {likedItems.length === 0 ? <EmptyState text="Quando você curtir resenhas ou comentários, eles aparecem aqui." /> : null}
             </View>
           ) : null}
 
-          {activeTab === "Comentarios" ? (
+          {activeTab === "Comentários" ? (
             <View style={styles.list}>
               {userComments.map((comment) => {
                 const review = reviewsById[comment.reviewId];
@@ -161,7 +161,7 @@ export function InteractionsScreen({
                 return (
                   <InteractionRow
                     key={comment.id}
-                    kind="Comentario"
+                    kind="Comentário"
                     book={book}
                     title={book?.title}
                     meta={review ? `em resenha de ${review.user}` : comment.time}
@@ -172,7 +172,7 @@ export function InteractionsScreen({
                   />
                 );
               })}
-              {userComments.length === 0 ? <EmptyState text="Quando voce comentar em resenhas, seus comentarios aparecem aqui." /> : null}
+              {userComments.length === 0 ? <EmptyState text="Quando você comentar em resenhas, seus comentários aparecem aqui." /> : null}
             </View>
           ) : null}
 

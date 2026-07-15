@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useMemo } from "react";
 
 import { getUsers } from "../services";
+import { usePersistentState } from "./usePersistentState";
 
 const baseUsers = getUsers();
 const initialFollowedUserIds = baseUsers.find((user) => user.id === "yasmin")?.followingIds ?? [];
 
 export function useProfile() {
-  const [profileOverride, setProfileOverride] = useState(null);
-  const [registeredAccount, setRegisteredAccount] = useState(null);
-  const [followedUserIds, setFollowedUserIds] = useState(initialFollowedUserIds);
+  const [profileOverride, setProfileOverride] = usePersistentState("bookclub:profileOverride", null);
+  const [registeredAccount, setRegisteredAccount] = usePersistentState("bookclub:registeredAccount", null);
+  const [followedUserIds, setFollowedUserIds] = usePersistentState(
+    "bookclub:followedUserIds",
+    initialFollowedUserIds
+  );
 
   const currentUserHandle = profileOverride?.handle || "@yasmin_le";
+  const users = useMemo(
+    () =>
+      baseUsers.map((user) =>
+        user.id === "yasmin" && profileOverride ? { ...user, ...profileOverride } : user
+      ),
+    [profileOverride]
+  );
 
   function registerAccount(account) {
     const cleanEmail = account?.email?.trim() ?? "";
@@ -58,6 +69,7 @@ export function useProfile() {
     registeredAccount,
     registerAccount,
     saveProfile,
-    toggleFollow
+    toggleFollow,
+    users
   };
 }

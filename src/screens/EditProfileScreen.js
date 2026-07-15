@@ -94,10 +94,10 @@ export function EditProfileScreen({ onBack, onCreate, onNavigate, onSave, profil
               maxLength={36}
             />
             <Field
-              label="Usuario"
+              label="Usuário"
               value={handle}
               onChangeText={updateHandle}
-              placeholder="usuario"
+              placeholder="usuário"
               prefix="@"
               autoCapitalize="none"
               autoCorrect={false}

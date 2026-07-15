@@ -43,7 +43,12 @@ export function BottomNav({ activeTab = "home", onChange, onCreate }) {
 
 function NavItem({ item, active, onPress }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.item}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={item.label}
+      onPress={onPress}
+      style={[styles.item, active && styles.activeItem]}
+    >
       <Icon name={item.icon} size={23} color={active ? colors.text : colors.textMuted} />
       <Text style={[styles.label, active && styles.activeLabel]}>{item.label}</Text>
     </Pressable>
@@ -67,17 +72,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: colors.shadow,
-    shadowOpacity: 0.46,
-    shadowOffset: { width: 0, height: 16 },
-    shadowRadius: 24,
-    elevation: 16
+    shadowOpacity: 0.28,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 18,
+    elevation: 10
   },
   item: {
     width: 56,
     height: 50,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3
+    gap: 3,
+    borderRadius: 17
+  },
+  activeItem: {
+    backgroundColor: "rgba(157,192,216,0.1)"
   },
   label: {
     color: colors.textMuted,
@@ -96,10 +105,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.accent,
-    shadowOpacity: 0.42,
-    shadowOffset: { width: 0, height: 12 },
-    shadowRadius: 24,
-    elevation: 12
+    shadowOpacity: 0.24,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 16,
+    elevation: 8
   },
   addButtonPressed: {
     transform: [{ scale: 0.94 }]

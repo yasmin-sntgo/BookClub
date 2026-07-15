@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { AppToast } from "../components/AppToast";
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
@@ -66,7 +67,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
       return;
     }
 
-    setNotice(isReviewMode ? "Resenha publicada." : "Avaliacao salva.");
+    setNotice(isReviewMode ? "Resenha publicada." : "Avaliação salva.");
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -112,7 +113,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
               <>
                 <BookCover book={book} size="small" />
                 <View style={styles.bookCopy}>
-                  <Text style={styles.bookLabel}>{isReviewMode ? "voce esta resenhando" : "voce esta avaliando"}</Text>
+                  <Text style={styles.bookLabel}>{isReviewMode ? "você está resenhando" : "você está avaliando"}</Text>
                   <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
                   <Text style={styles.bookAuthor} numberOfLines={1}>{book.author} - {book.genre}</Text>
                 </View>
@@ -123,7 +124,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
                   <Icon name="books" color={colors.accent} size={28} />
                 </View>
                 <Text style={styles.emptyBookTitle}>Escolha um livro</Text>
-                <Text style={styles.emptyBookText}>Selecione qual livro voce quer resenhar ou avaliar.</Text>
+                <Text style={styles.emptyBookText}>Selecione qual livro você quer resenhar ou avaliar.</Text>
                 <View style={styles.chooseBookButton}>
                   <Text style={styles.chooseBookText}>buscar livro</Text>
                 </View>
@@ -131,7 +132,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
             )}
           </Pressable>
 
-          <SectionHeader title="Sua nota" action="obrigatoria" />
+          <SectionHeader title="Sua nota" action="obrigatória" />
           <View style={styles.ratingCard}>
             <View style={styles.ratingRow}>
               <View style={styles.starButtons}>
@@ -144,13 +145,13 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
               </Text>
             </View>
             <Text style={styles.ratingHint}>
-              {rating ? "Toque nas estrelas para ajustar sua avaliacao." : "Toque em uma estrela para dar sua nota."}
+              {rating ? "Toque nas estrelas para ajustar sua avaliação." : "Toque em uma estrela para dar sua nota."}
             </Text>
           </View>
 
           {isReviewMode ? (
             <>
-              <SectionHeader title="Texto" action="obrigatorio" />
+              <SectionHeader title="Texto" action="obrigatório" />
               <View style={styles.writeCard}>
                 <TextInput
                   multiline
@@ -171,17 +172,17 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
             <View style={styles.quickCard}>
               <Text style={styles.quickTitle}>Salvar apenas nota</Text>
               <Text style={styles.quickSubtitle}>
-                Sua avaliacao entra no livro e no seu perfil, sem virar resenha no feed.
+                Sua avaliação entra no livro e no seu perfil, sem virar resenha no feed.
               </Text>
             </View>
           )}
 
           {isReviewMode ? (
             <>
-              <SectionHeader title="Opcoes" />
+              <SectionHeader title="Opções" />
               <View style={styles.settingsCard}>
                 <ToggleRow
-                  title="Contem spoiler"
+                  title="Contém spoiler"
                   description="avisa antes de outras pessoas lerem"
                   value={hasSpoiler}
                   onPress={() => setHasSpoiler((current) => !current)}
@@ -201,11 +202,7 @@ export function CreateReviewScreen({ bookId = null, mode = "review", onBack, onC
             setBookPickerOpen(false);
           }}
         />
-        {notice ? (
-          <View style={styles.noticeToast}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
+        <AppToast message={notice} />
       </View>
     </SafeAreaView>
   );
@@ -298,13 +295,13 @@ function BookPicker({ visible, selectedBookId, onClose, onSelect }) {
         <View style={styles.pickerSheet}>
           <View style={styles.handle} />
           <Text style={styles.pickerTitle}>Escolher livro</Text>
-          <Text style={styles.pickerSubtitle}>Busque pelo titulo, autor ou genero do livro.</Text>
+          <Text style={styles.pickerSubtitle}>Busque pelo título, autor ou gênero do livro.</Text>
           <View style={styles.pickerSearch}>
             <Icon name="search" color={colors.textMuted} size={20} />
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Buscar por titulo, autor ou genero..."
+              placeholder="Buscar por título, autor ou gênero..."
               placeholderTextColor={colors.textMuted}
               style={styles.pickerSearchInput}
             />

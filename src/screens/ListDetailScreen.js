@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Modal, Pressable, SafeAreaView, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 
+import { AppToast } from "../components/AppToast";
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
@@ -48,17 +49,17 @@ export function ListDetailScreen({
   async function handleMenuAction(action) {
     setMenuVisible(false);
 
-    if (action === "Tornar privada" || action === "Tornar publica") {
+    if (action === "Tornar privada" || action === "Tornar pública") {
       const nextPrivate = !privateList;
       setPrivateList(nextPrivate);
       onPrivacyChange?.(list.id, nextPrivate);
-      setMenuNotice(action === "Tornar privada" ? "Lista marcada como privada." : "Lista marcada como publica.");
+      setMenuNotice(action === "Tornar privada" ? "Lista marcada como privada." : "Lista marcada como pública.");
       return;
     }
 
     if (action === "Editar lista") {
       onEdit?.(list.id);
-      setMenuNotice("Edicao de lista sera aberta aqui.");
+      setMenuNotice("Edição de lista será aberta aqui.");
       return;
     }
 
@@ -78,7 +79,7 @@ export function ListDetailScreen({
       } catch (error) {
         if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(listLink);
-          setMenuNotice("Compartilhamento indisponivel. Link copiado.");
+          setMenuNotice("Compartilhamento indisponível. Link copiado.");
           return;
         }
 
@@ -139,7 +140,7 @@ export function ListDetailScreen({
             {privateList ? (
               <View style={styles.privateBadge}>
                 <Icon name="lock" color={colors.accent} size={14} strokeWidth={2.1} />
-                <Text style={styles.privateBadgeText}>lista privada: somente voce ve esta lista</Text>
+                <Text style={styles.privateBadgeText}>lista privada: somente você vê esta lista</Text>
               </View>
             ) : null}
             <Text style={styles.listMeta}>{list.booksCount} livros - {list.saves} salvos - {list.updatedAt}</Text>
@@ -214,14 +215,10 @@ export function ListDetailScreen({
           onClose={() => setReportOpen(false)}
           onSubmit={() => {
             setReportOpen(false);
-            setMenuNotice("Denuncia registrada.");
+            setMenuNotice("Denúncia registrada.");
           }}
         />
-        {menuNotice ? (
-          <View style={styles.noticeToast}>
-            <Text style={styles.noticeText}>{menuNotice}</Text>
-          </View>
-        ) : null}
+        <AppToast message={menuNotice} />
       </View>
     </SafeAreaView>
   );
@@ -229,7 +226,7 @@ export function ListDetailScreen({
 
 function ListMenu({ owner, privateList, visible, onAction, onClose }) {
   const ownerActions = owner
-    ? ["Editar lista", privateList ? "Tornar publica" : "Tornar privada", "Apagar lista"]
+    ? ["Editar lista", privateList ? "Tornar pública" : "Tornar privada", "Apagar lista"]
     : [];
   const actions = [...ownerActions, "Compartilhar", "Copiar link", ...(!owner ? ["Denunciar lista"] : [])];
 
@@ -239,7 +236,7 @@ function ListMenu({ owner, privateList, visible, onAction, onClose }) {
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.menuSheet}>
           <View style={styles.menuHandle} />
-          <Text style={styles.menuTitle}>Opcoes da lista</Text>
+          <Text style={styles.menuTitle}>Opções da lista</Text>
           <View style={styles.menuActions}>
             {actions.map((action) => (
               <Pressable

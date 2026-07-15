@@ -9,17 +9,17 @@ import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
-const tabs = ["Livros", "Usuarios", "Listas"];
+const tabs = ["Livros", "Usuários", "Listas"];
 const mockBooks = getBooks();
 const mockUsers = getUsers();
 
 const genres = [
-  { name: "Fantasia", detail: "dragoes, magia, jornadas" },
+  { name: "Fantasia", detail: "dragões, magia, jornadas" },
   { name: "Terror", detail: "medo, suspense, escuro" },
   { name: "Romance", detail: "afetos, drama, encontros" },
-  { name: "Ficcao cientifica", detail: "futuro, espaco, ideias" },
+  { name: "Ficção científica", detail: "futuro, espaço, ideias" },
   { name: "Distopia", detail: "revoltas, governos, escolhas" },
-  { name: "Suspense", detail: "segredos, pistas, tensao" }
+  { name: "Suspense", detail: "segredos, pistas, tensão" }
 ];
 
 export function SearchScreen({
@@ -36,11 +36,11 @@ export function SearchScreen({
   onToggleListSave,
   onTabChange,
   onUserOpen,
-  savedListIds = []
+  savedListIds = [],
+  users = mockUsers
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [query, setQuery] = useState(initialQuery);
-  const [showAllGenres, setShowAllGenres] = useState(false);
   const normalizedQuery = query.trim().toLowerCase();
   const booksById = useMemo(
     () => Object.fromEntries(mockBooks.map((book) => [book.id, book])),
@@ -87,11 +87,11 @@ export function SearchScreen({
   const filteredUsers = useMemo(
     () =>
       normalizedQuery
-        ? mockUsers.filter((user) =>
+        ? users.filter((user) =>
             `${user.name} ${user.handle} ${user.bio}`.toLowerCase().includes(normalizedQuery)
           )
-        : mockUsers,
-    [normalizedQuery]
+        : users,
+    [normalizedQuery, users]
   );
 
   const filteredLists = useMemo(
@@ -126,7 +126,7 @@ export function SearchScreen({
             <TextInput
               value={query}
               onChangeText={handleQueryChange}
-              placeholder="Buscar por titulo, autor, usuario, lista..."
+              placeholder="Buscar por título, autor, usuário, lista..."
               placeholderTextColor={colors.textMuted}
               style={styles.searchInput}
             />
@@ -151,13 +151,11 @@ export function SearchScreen({
             <BooksSearch
               books={filteredBooks}
               showDiscovery={!normalizedQuery}
-              showAllGenres={showAllGenres}
               onGenrePress={handleGenrePress}
               onBookOpen={onBookOpen}
-              onShowAllGenres={() => setShowAllGenres(true)}
             />
           ) : null}
-          {activeTab === "Usuarios" ? (
+          {activeTab === "Usuários" ? (
             <UsersSearch
               followedUserIds={followedUserIds}
               users={filteredUsers}
@@ -186,12 +184,9 @@ export function SearchScreen({
 function BooksSearch({
   books,
   showDiscovery,
-  showAllGenres,
   onBookOpen,
-  onGenrePress,
-  onShowAllGenres
+  onGenrePress
 }) {
-  const visibleGenres = showAllGenres ? genres : genres.slice(0, 4);
   const visibleBooks = books;
 
   return (
@@ -199,12 +194,10 @@ function BooksSearch({
       {showDiscovery ? (
         <View style={styles.section}>
           <SectionHeader
-            title="Explorar generos"
-            action={showAllGenres ? null : "Todos"}
-            onAction={onShowAllGenres}
+            title="Explorar gêneros"
           />
           <View style={styles.genresGrid}>
-            {visibleGenres.map((genre) => (
+            {genres.map((genre) => (
               <Pressable key={genre.name} onPress={() => onGenrePress?.(genre.name)} style={styles.genreCard}>
                 <Text style={styles.genreTitle}>{genre.name}</Text>
                 <Text style={styles.genreDetail}>{genre.detail}</Text>
@@ -236,7 +229,7 @@ function BooksSearch({
 function UsersSearch({ followedUserIds, users, onToggleFollow, onUserOpen }) {
   return (
     <View style={styles.section}>
-      <SectionHeader title="Usuarios" />
+      <SectionHeader title="Usuários" />
       <View style={styles.resultList}>
         {users.map((user) => (
           <ResultRow
@@ -244,14 +237,14 @@ function UsersSearch({ followedUserIds, users, onToggleFollow, onUserOpen }) {
             avatar={user.avatar}
             title={user.name}
             subtitle={`${user.handle} - ${user.bio}`}
-            action={user.id === "yasmin" ? "Voce" : followedUserIds.includes(user.id) ? "Seguindo" : "Seguir"}
+            action={user.id === "yasmin" ? "Você" : followedUserIds.includes(user.id) ? "Seguindo" : "Seguir"}
             activeAction={followedUserIds.includes(user.id)}
             disabledAction={user.id === "yasmin"}
             onAction={() => user.id !== "yasmin" && onToggleFollow?.(user.id)}
             onPress={() => onUserOpen?.(user.id)}
           />
         ))}
-        {users.length === 0 ? <EmptyResults text="Nenhum usuario encontrado." /> : null}
+        {users.length === 0 ? <EmptyResults text="Nenhum usuário encontrado." /> : null}
       </View>
     </View>
   );

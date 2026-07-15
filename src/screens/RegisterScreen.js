@@ -55,7 +55,7 @@ export function RegisterScreen({ onCreateAccount, onLogin }) {
             />
 
             <AppInput
-              label="Usuario"
+              label="Usuário"
               value={username}
               onChangeText={setUsername}
               placeholder="@seunome"

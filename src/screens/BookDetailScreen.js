@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Image, Modal, Pressable, SafeAreaView, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
+import { AppToast } from "../components/AppToast";
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
@@ -19,7 +20,7 @@ const mockReviews = getReviews();
 const mockUsers = getUsers();
 
 const shelfOptions = ["Lendo", "Quero ler", "Lido", "Abandonado"];
-const moreOptions = ["Compartilhar livro", "Copiar link", "Sugerir correcao", "Denunciar problema"];
+const moreOptions = ["Compartilhar livro", "Copiar link", "Sugerir correção", "Denunciar problema"];
 const shelfStatusLabels = {
   reading: "Lendo",
   want: "Quero ler",
@@ -39,6 +40,7 @@ export function BookDetailScreen({
   ratings = [],
   reviews = mockReviews,
   shelfEntry,
+  users = mockUsers,
   onBack,
   onAddToShelf,
   onBookOpen,
@@ -102,7 +104,7 @@ export function BookDetailScreen({
     } catch (error) {
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(bookLink);
-        setNotice("Compartilhamento indisponivel. Link copiado.");
+        setNotice("Compartilhamento indisponível. Link copiado.");
         return;
       }
 
@@ -150,7 +152,7 @@ export function BookDetailScreen({
             >
               <Text style={styles.synopsisText} numberOfLines={synopsisOpen ? undefined : 4}>
                 {book.synopsis ??
-                  "Uma leitura marcante que mistura personagens memoraveis, conflitos intensos e um universo que convida o leitor a continuar pensando depois da ultima pagina."}
+                  "Uma leitura marcante que mistura personagens memoráveis, conflitos intensos e um universo que convida o leitor a continuar pensando depois da última página."}
               </Text>
               {!synopsisOpen ? (
                 <LinearGradient
@@ -174,6 +176,7 @@ export function BookDetailScreen({
                 onReviewOpen={onReviewOpen}
                 onSpoilerReveal={() => onSpoilerReveal?.(review.id)}
                 onUserOpen={onUserOpen}
+                users={users}
               />
             ) : (
               <View style={styles.emptyReviewCard}>
@@ -181,7 +184,7 @@ export function BookDetailScreen({
               </View>
             )}
 
-            <SectionHeader title="Avaliacoes" action="Ver todas" onAction={() => onRatingsOpen?.(book.id)} />
+            <SectionHeader title="Avaliações" action="Ver todas" onAction={() => onRatingsOpen?.(book.id)} />
             <View style={styles.ratingSummary}>
               <View style={styles.communityRating}>
                 <Text style={styles.ratingSummaryScore}>{book.rating}</Text>
@@ -244,7 +247,7 @@ export function BookDetailScreen({
               return;
             }
 
-            if (option === "Sugerir correcao") {
+            if (option === "Sugerir correção") {
               setFeedbackMode("correction");
               return;
             }
@@ -257,7 +260,7 @@ export function BookDetailScreen({
         />
         <TextFeedbackSheet
           visible={Boolean(feedbackMode)}
-          title={feedbackMode === "correction" ? "Sugerir correcao" : "Denunciar problema"}
+          title={feedbackMode === "correction" ? "Sugerir correção" : "Denunciar problema"}
           description={
             feedbackMode === "correction"
               ? "Explique qual informacao do livro precisa ser corrigida."
@@ -266,20 +269,16 @@ export function BookDetailScreen({
           placeholder={
             feedbackMode === "correction"
               ? "Ex: editora incorreta, ano errado, sinopse com erro..."
-              : "Explique o que esta errado ou inadequado..."
+              : "Explique o que está errado ou inadequado..."
           }
           submitLabel="Registrar"
           onClose={() => setFeedbackMode(null)}
           onSubmit={() => {
             setFeedbackMode(null);
-            setNotice(feedbackMode === "correction" ? "Sugestao registrada." : "Denuncia registrada.");
+            setNotice(feedbackMode === "correction" ? "Sugestão registrada." : "Denúncia registrada.");
           }}
         />
-        {notice ? (
-          <View style={styles.noticeToast}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
+        <AppToast message={notice} />
       </View>
     </SafeAreaView>
   );
@@ -316,7 +315,7 @@ function Hero({ book, shelfEntry, userRating, onBack, onCreateReview, onMore, on
           )}
         </View>
         <View style={styles.bookInfo}>
-          <Text style={styles.genreLabel}>genero - {book.genre}</Text>
+          <Text style={styles.genreLabel}>gênero - {book.genre}</Text>
           <Text
             adjustsFontSizeToFit
             minimumFontScale={0.78}
@@ -332,7 +331,7 @@ function Hero({ book, shelfEntry, userRating, onBack, onCreateReview, onMore, on
           <Text style={styles.author} numberOfLines={1}>{book.author}</Text>
           <View style={styles.metaPills}>
             <Text style={styles.metaPill}>{book.year}</Text>
-            <Text style={styles.metaPill}>{book.pages} paginas</Text>
+            <Text style={styles.metaPill}>{book.pages} páginas</Text>
           </View>
         </View>
       </View>
@@ -388,8 +387,8 @@ function SectionHeader({ title, action, onAction }) {
   );
 }
 
-function ReviewCard({ review, commentCount, liked, spoilerRevealed, onReviewOpen, onSpoilerReveal, onUserOpen }) {
-  const userId = mockUsers.find((user) => user.handle === review.handle)?.id ?? "lia";
+function ReviewCard({ review, commentCount, liked, spoilerRevealed, onReviewOpen, onSpoilerReveal, onUserOpen, users = mockUsers }) {
+  const userId = users.find((user) => user.handle === review.handle)?.id ?? "lia";
   const likeCount = getReviewLikeCount(review, liked);
 
   return (

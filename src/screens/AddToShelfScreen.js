@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { AppToast } from "../components/AppToast";
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
@@ -11,8 +12,8 @@ import { fonts, type } from "../theme/typography";
 
 const statusOptions = [
   { id: "want", title: "Quero ler", description: "para lembrar depois" },
-  { id: "reading", title: "Lendo", description: "esta na sua leitura atual" },
-  { id: "read", title: "Lido", description: "ja terminou esse livro" },
+  { id: "reading", title: "Lendo", description: "está na sua leitura atual" },
+  { id: "read", title: "Lido", description: "já terminou esse livro" },
   { id: "abandoned", title: "Abandonado", description: "parou e quer registrar" }
 ];
 const mockBooks = getBooks();
@@ -68,6 +69,15 @@ export function AddToShelfScreen({
       clearTimeout(saveTimeoutRef.current);
     }
   }, []);
+
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => setNotice(""), 2200);
+    return () => clearTimeout(timeout);
+  }, [notice]);
 
   const filteredBooks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -130,7 +140,7 @@ export function AddToShelfScreen({
             <Icon name="back" color={colors.textSoft} size={24} strokeWidth={2.4} />
           </Pressable>
           <View style={styles.headerCopy}>
-            <Text style={styles.title}>Adicionar a estante</Text>
+            <Text style={styles.title}>Adicionar à estante</Text>
             <Text style={styles.subtitle}>marque um livro na sua biblioteca</Text>
           </View>
           <View style={styles.headerSpacer} />
@@ -142,7 +152,7 @@ export function AddToShelfScreen({
             <BookCover book={selectedBook} size="small" />
             <View style={styles.selectedCopy}>
               <Text style={styles.selectedMeta}>
-                {currentEntry ? "ja esta na estante" : "novo na estante"}
+                {currentEntry ? "já está na estante" : "novo na estante"}
               </Text>
               <Text style={styles.selectedTitle} numberOfLines={2}>{selectedBook.title}</Text>
               <Text style={styles.selectedAuthor} numberOfLines={1}>
@@ -157,7 +167,7 @@ export function AddToShelfScreen({
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Titulo, autor ou genero..."
+              placeholder="Título, autor ou gênero..."
               placeholderTextColor={colors.textMuted}
               style={styles.searchInput}
             />
@@ -178,7 +188,7 @@ export function AddToShelfScreen({
                   <View style={styles.bookOptionCopy}>
                     <Text style={styles.bookOptionTitle} numberOfLines={1}>{book.title}</Text>
                     <Text style={styles.bookOptionAuthor} numberOfLines={1}>{book.author}</Text>
-                    {entry ? <Text style={styles.bookOptionMeta}>ja marcado</Text> : null}
+                    {entry ? <Text style={styles.bookOptionMeta}>já marcado</Text> : null}
                   </View>
                   <View style={[styles.selectDot, isSelected && styles.selectDotActive]} />
                 </Pressable>
@@ -230,7 +240,7 @@ export function AddToShelfScreen({
             </Animated.View>
             <View style={styles.favoriteCopy}>
               <Text style={styles.favoriteTitle}>Favorito</Text>
-              <Text style={styles.favoriteText}>tambem aparece na area de favoritos da Estante</Text>
+              <Text style={styles.favoriteText}>também aparece na área de favoritos da Estante</Text>
             </View>
           </Pressable>
 
@@ -240,11 +250,7 @@ export function AddToShelfScreen({
         </ScrollView>
 
         <BottomNav activeTab="library" onChange={onNavigate} onCreate={onCreate} />
-        {notice ? (
-          <View style={styles.noticeToast}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
+        <AppToast message={notice} />
       </View>
     </SafeAreaView>
   );

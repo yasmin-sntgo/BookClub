@@ -52,7 +52,7 @@ export function NotificationsScreen({
             <Icon name="back" color={colors.textSoft} size={24} strokeWidth={2.4} />
           </Pressable>
           <View style={styles.titleBlock}>
-            <Text style={styles.title}>Notificacoes</Text>
+            <Text style={styles.title}>Notificações</Text>
             <Text style={styles.subtitle}>
               {unreadCount > 0 ? `${unreadCount} novas` : "Tudo em dia"}
             </Text>
@@ -157,7 +157,7 @@ function getTypeLabel(type) {
   }
 
   if (type === "comment") {
-    return "Comentario";
+    return "Comentário";
   }
 
   if (type === "like") {

@@ -56,7 +56,7 @@ export function CreateActionSheet({ visible, onClose }) {
       {
         translateY: sheetProgress.interpolate({
           inputRange: [0, 1],
-          outputRange: [28, 0]
+          outputRange: [18, 0]
         })
       },
       {
@@ -110,10 +110,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(240,236,228,0.12)",
     shadowColor: colors.shadow,
-    shadowOpacity: 0.58,
-    shadowOffset: { width: 0, height: 24 },
-    shadowRadius: 40,
-    elevation: 24
+    shadowOpacity: 0.34,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 28,
+    elevation: 16
   },
   handle: {
     width: 42,

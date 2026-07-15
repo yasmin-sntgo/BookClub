@@ -1,14 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { getLists } from "../services";
+import { usePersistentState } from "./usePersistentState";
 
 const baseLists = getLists();
 const initialSavedListIds = ["crying", "sci-fi-start"];
 
 export function useLists({ currentUserHandle = "@yasmin_le", profileOverride = null } = {}) {
-  const [savedListIds, setSavedListIds] = useState(initialSavedListIds);
-  const [createdLists, setCreatedLists] = useState([]);
-  const [deletedListIds, setDeletedListIds] = useState([]);
+  const [savedListIds, setSavedListIds] = usePersistentState("bookclub:savedListIds", initialSavedListIds);
+  const [createdLists, setCreatedLists] = usePersistentState("bookclub:createdLists", []);
+  const [deletedListIds, setDeletedListIds] = usePersistentState("bookclub:deletedListIds", []);
 
   const lists = useMemo(
     () => [...createdLists, ...baseLists].filter((list) => !deletedListIds.includes(list.id)),
@@ -30,7 +31,7 @@ export function useLists({ currentUserHandle = "@yasmin_le", profileOverride = n
       title: listDraft.title,
       creator: profileOverride?.name || "Yasmin",
       handle: currentUserHandle,
-      description: listDraft.description || "lista criada por voce no BookClub.",
+      description: listDraft.description || "lista criada por você no BookClub.",
       booksCount: listDraft.bookIds.length,
       saves: "0",
       createdAt: "2026",
@@ -48,7 +49,7 @@ export function useLists({ currentUserHandle = "@yasmin_le", profileOverride = n
   function editList(listDraft) {
     const nextList = {
       title: listDraft.title,
-      description: listDraft.description || "lista criada por voce no BookClub.",
+      description: listDraft.description || "lista criada por você no BookClub.",
       booksCount: listDraft.bookIds.length,
       updatedAt: "atualizada agora",
       ordered: listDraft.ordered,

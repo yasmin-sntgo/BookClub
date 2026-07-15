@@ -10,9 +10,9 @@ import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
 
 const listCategories = [
-  { id: "classicos", label: "Classicos" },
+  { id: "classicos", label: "Clássicos" },
   { id: "tristes", label: "Tristes" },
-  { id: "ficcao cientifica", label: "Ficcao cientifica" },
+  { id: "ficcao cientifica", label: "Ficção científica" },
   { id: "terror", label: "Terror" },
   { id: "fantasia", label: "Fantasia" },
   { id: "nacionais", label: "Nacionais" }
@@ -71,7 +71,7 @@ export function CreateListScreen({ list = null, onBack, onCreate, onNavigate, on
 
   function saveList() {
     if (!canSave) {
-      setNotice("Adicione um titulo e pelo menos um livro para criar a lista.");
+      setNotice("Adicione um título e pelo menos um livro para criar a lista.");
       return;
     }
 
@@ -107,7 +107,7 @@ export function CreateListScreen({ list = null, onBack, onCreate, onNavigate, on
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <SectionLabel title="Informacoes" />
+          <SectionLabel title="Informações" />
           <View style={styles.formCard}>
             <TextInput
               value={title}
@@ -121,7 +121,7 @@ export function CreateListScreen({ list = null, onBack, onCreate, onNavigate, on
               multiline
               value={description}
               onChangeText={setDescription}
-              placeholder="Descreva o clima, a ideia ou o criterio dessa lista..."
+              placeholder="Descreva o clima, a ideia ou o critério dessa lista..."
               placeholderTextColor={colors.textMuted}
               textAlignVertical="top"
               style={styles.descriptionInput}
@@ -144,17 +144,17 @@ export function CreateListScreen({ list = null, onBack, onCreate, onNavigate, on
             ))}
           </ScrollView>
 
-          <SectionLabel title="Configuracao" />
+          <SectionLabel title="Configuração" />
           <View style={styles.settingsCard}>
             <ToggleRow
               title="Lista com ordem"
-              description="usa numeracao do criador no detalhe da lista"
+              description="usa numeração do criador no detalhe da lista"
               value={ordered}
               onPress={() => setOrdered((current) => !current)}
             />
             <ToggleRow
               title="Lista privada"
-              description="fica visivel apenas para voce"
+              description="fica visível apenas para você"
               value={privateList}
               onPress={() => setPrivateList((current) => !current)}
             />
@@ -192,7 +192,7 @@ export function CreateListScreen({ list = null, onBack, onCreate, onNavigate, on
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Titulo, autor ou genero..."
+              placeholder="Título, autor ou gênero..."
               placeholderTextColor={colors.textMuted}
               style={styles.searchInput}
             />
@@ -222,7 +222,7 @@ export function CreateListScreen({ list = null, onBack, onCreate, onNavigate, on
             }) : (
               <View style={styles.emptySearchCard}>
                 <Text style={styles.emptySearchTitle}>Nenhum livro encontrado</Text>
-                <Text style={styles.emptySearchText}>Tente buscar por titulo, autor ou genero.</Text>
+                <Text style={styles.emptySearchText}>Tente buscar por título, autor ou gênero.</Text>
               </View>
             )}
           </View>
@@ -234,7 +234,9 @@ export function CreateListScreen({ list = null, onBack, onCreate, onNavigate, on
             onPress={saveList}
             style={[styles.saveButton, !canSave && styles.disabledSaveButton]}
           >
-            <Text style={[styles.saveText, !canSave && styles.disabledSaveText]}>Criar lista</Text>
+            <Text style={[styles.saveText, !canSave && styles.disabledSaveText]}>
+              {list ? "Salvar lista" : "Criar lista"}
+            </Text>
           </Pressable>
         </ScrollView>
 

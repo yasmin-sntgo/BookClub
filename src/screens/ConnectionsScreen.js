@@ -20,13 +20,14 @@ export function ConnectionsScreen({
   onNavigate,
   onTabChange,
   onToggleFollow,
-  onUserOpen
+  onUserOpen,
+  users = mockUsers
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
-  const user = mockUsers.find((item) => item.id === userId) ?? mockUsers[0];
+  const user = users.find((item) => item.id === userId) ?? users[0] ?? mockUsers[0];
   const usersById = useMemo(
-    () => Object.fromEntries(mockUsers.map((item) => [item.id, item])),
-    []
+    () => Object.fromEntries(users.map((item) => [item.id, item])),
+    [users]
   );
   const ids = getConnectionIds({ activeTab, followedUserIds, user });
   const people = ids.map((id) => usersById[id]).filter(Boolean);
@@ -122,7 +123,7 @@ function UserRow({ followed = false, user, onFollow, onPress }) {
         style={[styles.followButton, followed && styles.followingButton, isCurrentUser && styles.selfButton]}
       >
         <Text style={[styles.followText, followed && styles.followingText, isCurrentUser && styles.selfText]}>
-          {isCurrentUser ? "Voce" : followed ? "Seguindo" : "Seguir"}
+          {isCurrentUser ? "Você" : followed ? "Seguindo" : "Seguir"}
         </Text>
       </Pressable>
     </Pressable>

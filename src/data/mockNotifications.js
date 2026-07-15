@@ -2,7 +2,7 @@ export const mockNotifications = [
   {
     id: "notification-1",
     type: "follow",
-    title: "Lia Literatura comecou a seguir voce",
+    title: "Lia Literatura começou a seguir você",
     body: "Ela agora acompanha suas resenhas e listas.",
     time: "agora",
     read: false,

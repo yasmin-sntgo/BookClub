@@ -39,7 +39,7 @@ export function LoginScreen({ initialEmail = "", accountNotice = "", onCreateAcc
 
           <AuthCard>
             <Text style={styles.cardTitle}>Bem-vindo de volta</Text>
-            <Text style={styles.cardSub}>sua proxima historia esta esperando</Text>
+            <Text style={styles.cardSub}>sua próxima história está esperando</Text>
 
             <AppInput
               label="E-mail"
@@ -88,7 +88,6 @@ export function LoginScreen({ initialEmail = "", accountNotice = "", onCreateAcc
             </View>
           </AuthCard>
 
-          <Text style={styles.footer}></Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -187,10 +186,4 @@ const styles = StyleSheet.create({
     minHeight: 24,
     justifyContent: "center"
   },
-  footer: {
-    ...type.smallItalic,
-    color: colors.textMuted,
-    marginTop: spacing.lg,
-    textAlign: "center"
-  }
 });

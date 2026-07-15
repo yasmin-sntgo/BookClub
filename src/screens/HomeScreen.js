@@ -13,7 +13,7 @@ import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
 const reviewFilters = [
-  { id: "all", label: "Pra voce" },
+  { id: "all", label: "Pra você" },
   { id: "following", label: "Seguindo" }
 ];
 const mockBooks = getBooks();
@@ -29,6 +29,7 @@ export function HomeScreen({
   revealedSpoilerReviewIds = [],
   reviews = mockReviews,
   savedReviewIds = [],
+  users = mockUsers,
   onBookOpen,
   onCreate,
   onNavigate,
@@ -87,6 +88,7 @@ export function HomeScreen({
               reviewFilterMode={reviewFilterMode}
               reviews={reviews}
               savedReviewIds={savedReviewIds}
+              users={users}
               booksById={booksById}
               onBookOpen={onBookOpen}
               onReviewOpen={onReviewOpen}
@@ -140,10 +142,10 @@ function BooksPanel({ books, onBookOpen }) {
         <FeaturedBook book={featuredBook} onBookOpen={onBookOpen} />
       ) : null}
       <BookRail
-        title="Popular agora"
-        action={expandedRails.includes("Popular agora") ? null : "Ver todos"}
-        books={expandedRails.includes("Popular agora") ? popularBooks : popularBooks.slice(0, 5)}
-        onAction={() => toggleRail("Popular agora")}
+        title="Populares agora"
+        action={expandedRails.includes("Populares agora") ? null : "Ver todos"}
+        books={expandedRails.includes("Populares agora") ? popularBooks : popularBooks.slice(0, 5)}
+        onAction={() => toggleRail("Populares agora")}
         onBookOpen={onBookOpen}
       />
       <BookRail
@@ -252,9 +254,10 @@ function ReviewsPanel({
   onToggleReviewLike,
   onToggleReviewSave,
   onSpoilerReveal,
-  onUserOpen
+  onUserOpen,
+  users = mockUsers
 }) {
-  const followedHandles = mockUsers
+  const followedHandles = users
     .filter((user) => followedUserIds.includes(user.id))
     .map((user) => user.handle);
   const visibleReviews = useMemo(() => {
@@ -282,6 +285,7 @@ function ReviewsPanel({
           onToggleSave={() => onToggleReviewSave?.(review.id)}
           onSpoilerReveal={() => onSpoilerReveal?.(review.id)}
           onUserOpen={onUserOpen}
+          users={users}
         />
       ))}
       {visibleReviews.length === 0 ? (
@@ -317,8 +321,8 @@ function ReviewFilterTabs({ filterMode = "all", onChange }) {
   );
 }
 
-function ReviewPost({ review, book, liked, saved, spoilerRevealed, commentCount, onBookOpen, onReviewOpen, onSpoilerReveal, onToggleLike, onToggleSave, onUserOpen }) {
-  const userId = findUserId(review.handle);
+function ReviewPost({ review, book, liked, saved, spoilerRevealed, commentCount, onBookOpen, onReviewOpen, onSpoilerReveal, onToggleLike, onToggleSave, onUserOpen, users = mockUsers }) {
+  const userId = findUserId(review.handle, users);
   const likeCount = review.likes + (liked && !review.liked ? 1 : 0) - (!liked && review.liked ? 1 : 0);
 
   return (
@@ -393,8 +397,8 @@ function countReviewComments(review, comments) {
   return comments.filter((comment) => comment.reviewId === review.id).length || review.comments;
 }
 
-function findUserId(handle) {
-  return mockUsers.find((user) => user.handle === handle)?.id ?? "lia";
+function findUserId(handle, users = mockUsers) {
+  return users.find((user) => user.handle === handle)?.id ?? "lia";
 }
 
 function ActionIcon({ icon, count, active = false, activeColor = colors.accent, onPress }) {
@@ -480,11 +484,15 @@ function SectionHeader({ title, action, onAction }) {
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {action && onAction ? (
-        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8}>
+        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8} style={styles.sectionActionButton}>
           <Text style={styles.sectionAction}>{action}</Text>
+          <Icon name="next" color={colors.accent} size={15} strokeWidth={2.2} />
         </Pressable>
       ) : action ? (
-        <Text style={styles.sectionAction}>{action}</Text>
+        <View style={styles.sectionActionButton}>
+          <Text style={styles.sectionAction}>{action}</Text>
+          <Icon name="next" color={colors.accent} size={15} strokeWidth={2.2} />
+        </View>
       ) : null}
     </View>
   );
@@ -689,6 +697,12 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.bodyBold,
     fontSize: 12
+  },
+  sectionActionButton: {
+    minHeight: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3
   },
   bookRail: {
     paddingHorizontal: spacing.lg,

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated } from "react-native";
 
 import { CreateActionSheet } from "../components/CreateActionSheet";
 import { AddToShelfScreen } from "../screens/AddToShelfScreen";
@@ -54,7 +55,8 @@ export function AppNavigator() {
     registeredAccount,
     registerAccount,
     saveProfile,
-    toggleFollow
+    toggleFollow,
+    users
   } = useProfile();
   const {
     saveShelfEntry: persistShelfEntry,
@@ -103,6 +105,27 @@ export function AppNavigator() {
     unreadNotificationsCount
   } = useNotifications();
   const [history, setHistory] = useState([]);
+  const transitionKey = useMemo(
+    () =>
+      [
+        screen,
+        selectedBookId,
+        selectedListId,
+        selectedReviewId,
+        selectedUserId,
+        selectedShelfUserId,
+        selectedConnectionsUserId
+      ].join(":"),
+    [
+      screen,
+      selectedBookId,
+      selectedListId,
+      selectedReviewId,
+      selectedUserId,
+      selectedShelfUserId,
+      selectedConnectionsUserId
+    ]
+  );
 
   function currentRoute(overrides = {}) {
     return {
@@ -394,7 +417,7 @@ export function AppNavigator() {
   function withCreateSheet(content) {
     return (
       <>
-        {content}
+        <ScreenReveal transitionKey={transitionKey}>{content}</ScreenReveal>
         <CreateActionSheet visible={createOpen} onClose={handleCreateAction} />
       </>
     );
@@ -402,13 +425,15 @@ export function AppNavigator() {
 
   if (screen === "register") {
     return (
-      <RegisterScreen
-        onCreateAccount={(account) => {
-          registerAccount(account);
-          navigateRoot("login");
-        }}
-        onLogin={() => navigateRoot("login")}
-      />
+      <ScreenReveal transitionKey={transitionKey}>
+        <RegisterScreen
+          onCreateAccount={(account) => {
+            registerAccount(account);
+            navigateRoot("login");
+          }}
+          onLogin={() => navigateRoot("login")}
+        />
+      </ScreenReveal>
     );
   }
 
@@ -422,6 +447,7 @@ export function AppNavigator() {
         likedReviewIds={likedReviewIds}
         revealedSpoilerReviewIds={revealedSpoilerReviewIds}
         savedReviewIds={savedReviewIds}
+        users={users}
         onBookOpen={(bookId, tab = "books") => {
           setHomeInitialTab(tab);
           openBook(bookId, "home", currentRoute({ screen: "home", homeInitialTab: tab }));
@@ -479,6 +505,7 @@ export function AppNavigator() {
         initialTab={searchInitialTab}
         lists={allLists}
         followedUserIds={followedUserIds}
+        users={users}
         onBookOpen={(bookId) => openBook(bookId, "search", currentRoute({ screen: "search" }))}
         onCreate={() => setCreateOpen(true)}
         onListOpen={(listId) => openList(listId, "search", currentRoute({ screen: "search" }))}
@@ -573,6 +600,7 @@ export function AppNavigator() {
         ratings={createdRatings}
         reviews={allReviews}
         comments={allComments}
+        users={users}
         likedReviewIds={likedReviewIds}
         revealedSpoilerReviewIds={revealedSpoilerReviewIds}
         shelfEntry={shelfEntries.find((entry) => entry.bookId === selectedBookId)}
@@ -643,6 +671,7 @@ export function AppNavigator() {
         likedReviewIds={likedReviewIds}
         revealedSpoilerReviewIds={revealedSpoilerReviewIds}
         reviews={allReviews}
+        users={users}
         onBack={() => goBack(goToBook)}
         onCreate={() => setCreateOpen(true)}
         onCreateReview={(bookId) =>
@@ -682,6 +711,7 @@ export function AppNavigator() {
         comments={allComments}
         currentUserHandle={currentUserHandle}
         reviews={allReviews}
+        users={users}
         onBack={() => goBack(() => goToReviewOrigin(reviewOrigin))}
         onBookOpen={(bookId) =>
           openBook(bookId, "review", currentRoute({ screen: "review", selectedReviewId }))
@@ -779,6 +809,7 @@ export function AppNavigator() {
         privateShelf={selectedShelfUserId === "yasmin" && shelfPrivate}
         userId={selectedShelfUserId}
         shelfEntries={shelfEntries}
+        users={users}
         onBack={() => goBack(() => goHome(homeInitialTab))}
         onBookOpen={(bookId) =>
           openBook(bookId, "profileShelf", currentRoute({ screen: "profileShelf", selectedShelfUserId }))
@@ -826,6 +857,7 @@ export function AppNavigator() {
         onBack={() => goBack(() => goHome(homeInitialTab))}
         onCreate={() => setCreateOpen(true)}
         followedUserIds={followedUserIds}
+        users={users}
         onNavigate={navigateRoot}
         onTabChange={setConnectionsInitialTab}
         onToggleFollow={toggleFollow}
@@ -837,11 +869,32 @@ export function AppNavigator() {
   }
 
   return (
-    <LoginScreen
-      accountNotice={registeredAccount ? "Conta criada. Entre com seu e-mail e senha para continuar." : ""}
-      initialEmail={registeredAccount?.email ?? ""}
-      onCreateAccount={() => navigateRoot("register")}
-      onLogin={() => goHome("books")}
-    />
+    <ScreenReveal transitionKey={transitionKey}>
+      <LoginScreen
+        accountNotice={registeredAccount ? "Conta criada. Entre com seu e-mail e senha para continuar." : ""}
+        initialEmail={registeredAccount?.email ?? ""}
+        onCreateAccount={() => navigateRoot("register")}
+        onLogin={() => goHome("books")}
+      />
+    </ScreenReveal>
+  );
+}
+
+function ScreenReveal({ children, transitionKey }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    opacity.setValue(0.96);
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 110,
+      useNativeDriver: true
+    }).start();
+  }, [opacity, transitionKey]);
+
+  return (
+    <Animated.View style={{ flex: 1, opacity }}>
+      {children}
+    </Animated.View>
   );
 }

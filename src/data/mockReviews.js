@@ -10,7 +10,7 @@ export const mockReviews = [
     bookId: "sunrise",
     rating: 4,
     text:
-      "A Suzanne Collins conseguiu me surpreender de novo. Achei que ja sabia tudo sobre esse universo, mas essa virada me deixou olhando para a parede por alguns minutos.",
+      "A Suzanne Collins conseguiu me surpreender de novo. Achei que já sabia tudo sobre esse universo, mas essa virada me deixou olhando para a parede por alguns minutos.",
     likes: 218,
     comments: 23,
     liked: true
@@ -42,7 +42,7 @@ export const mockReviews = [
     bookId: "it",
     rating: 5,
     text:
-      "Li em tres dias. Mil paginas e eu nao conseguia parar. O Stephen King faz voce se importar tanto com os personagens que quando pesa, pesa de verdade.",
+      "Li em três dias. Mil páginas e eu não conseguia parar. O Stephen King faz você se importar tanto com os personagens que quando pesa, pesa de verdade.",
     likes: 312,
     comments: 41,
     liked: false
@@ -58,7 +58,7 @@ export const mockReviews = [
     bookId: "sunrise",
     rating: 4,
     text:
-      "Eu gosto quando uma historia parece abrir uma porta que eu achei que ja conhecia. Esse livro me deixou com aquela sensacao boa de terminar e ainda ficar pensando nos detalhes.",
+      "Eu gosto quando uma história parece abrir uma porta que eu achei que já conhecia. Esse livro me deixou com aquela sensação boa de terminar e ainda ficar pensando nos detalhes.",
     likes: 184,
     comments: 19,
     liked: false

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BookCover } from "../components/BookCover";
@@ -9,14 +9,22 @@ import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts, type } from "../theme/typography";
 
-const categories = ["Todos", "Classicos", "Tristes", "Ficcao cientifica", "Terror", "Fantasia", "Nacionais"];
+const categories = [
+  { label: "Todos", tag: "todos" },
+  { label: "Clássicos", tag: "classicos" },
+  { label: "Tristes", tag: "tristes" },
+  { label: "Ficção científica", tag: "ficcao cientifica" },
+  { label: "Terror", tag: "terror" },
+  { label: "Fantasia", tag: "fantasia" },
+  { label: "Nacionais", tag: "nacionais" }
+];
 const mockBooks = getBooks();
 const mockLists = getLists();
 
 export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, onCreate, onListOpen, onNavigate }) {
-  const [activeCategory, setActiveCategory] = useState("Todos");
+  const [activeCategory, setActiveCategory] = useState("todos");
   const [showUserLists, setShowUserLists] = useState(false);
-  const booksById = Object.fromEntries(mockBooks.map((book) => [book.id, book]));
+  const booksById = useMemo(() => Object.fromEntries(mockBooks.map((book) => [book.id, book])), []);
   const publicLists = lists.filter((list) => !list.private);
   const savedLists = lists.filter((list) => savedListIds.includes(list.id));
   const userLists = lists.filter((list) => list.creator === "Yasmin");
@@ -26,9 +34,9 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
       .filter((list) => !userLists.some((userList) => userList.id === list.id))
       .map((list) => ({ ...list, personalLabel: "lista salva" }))
   ];
-  const exploreLists = activeCategory === "Todos"
+  const exploreLists = activeCategory === "todos"
     ? publicLists
-    : publicLists.filter((list) => list.tag === activeCategory.toLowerCase());
+    : publicLists.filter((list) => list.tag === activeCategory);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -55,15 +63,17 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
               </View>
               <View style={styles.personalCopy}>
                 <Text style={styles.personalTitle}>
-                  {personalLists.length ? `${personalLists.length} listas na sua area` : "Nenhuma lista ainda"}
+                  {personalLists.length ? `${personalLists.length} listas na sua área` : "Nenhuma lista ainda"}
                 </Text>
                 <Text style={styles.personalText}>
                   {personalLists.length
                     ? `${userLists.length} criadas - ${savedLists.length} salvas`
-                    : "Crie sua primeira lista pelo botao +."}
+                    : "Crie sua primeira lista pelo botão +."}
                 </Text>
               </View>
-              <Icon name="next" color={colors.textMuted} size={20} strokeWidth={2.1} />
+              <View style={[styles.personalChevron, showUserLists && styles.personalChevronOpen]}>
+                <Icon name="next" color={colors.textMuted} size={20} strokeWidth={2.1} />
+              </View>
             </Pressable>
 
             {showUserLists && personalLists.length > 0 ? (
@@ -87,11 +97,13 @@ export function ListsScreen({ lists = mockLists, savedListIds = [], onBookOpen, 
               {categories.map((category) => (
                 <Pressable
                   accessibilityRole="button"
-                  key={category}
-                  onPress={() => setActiveCategory(category)}
-                  style={[styles.moodChip, activeCategory === category && styles.activeMoodChip]}
+                  key={category.tag}
+                  onPress={() => setActiveCategory(category.tag)}
+                  style={[styles.moodChip, activeCategory === category.tag && styles.activeMoodChip]}
                 >
-                  <Text style={[styles.moodText, activeCategory === category && styles.activeMoodText]}>{category}</Text>
+                  <Text style={[styles.moodText, activeCategory === category.tag && styles.activeMoodText]}>
+                    {category.label}
+                  </Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -175,11 +187,15 @@ function SectionHeader({ title, action, onAction }) {
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {action && onAction ? (
-        <Pressable accessibilityRole="button" onPress={onAction}>
+        <Pressable accessibilityRole="button" onPress={onAction} style={styles.sectionActionButton}>
           <Text style={styles.sectionAction}>{action}</Text>
+          <Icon name="next" color={colors.accent} size={15} strokeWidth={2.2} />
         </Pressable>
       ) : action ? (
-        <Text style={styles.sectionAction}>{action}</Text>
+        <View style={styles.sectionActionButton}>
+          <Text style={styles.sectionAction}>{action}</Text>
+          <Icon name="next" color={colors.accent} size={15} strokeWidth={2.2} />
+        </View>
       ) : null}
     </View>
   );
@@ -315,6 +331,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 12
   },
+  sectionActionButton: {
+    minHeight: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3
+  },
   listCard: {
     marginHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -448,5 +470,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     marginTop: 2
+  },
+  personalChevron: {
+    transform: [{ rotate: "0deg" }]
+  },
+  personalChevronOpen: {
+    transform: [{ rotate: "90deg" }]
   }
 });

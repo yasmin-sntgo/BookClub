@@ -57,9 +57,10 @@ export function ProfileShelfScreen({
   onBack,
   onBookOpen,
   onCreate,
-  onNavigate
+  onNavigate,
+  users = mockUsers
 }) {
-  const user = mockUsers.find((item) => item.id === userId) ?? mockUsers[0];
+  const user = users.find((item) => item.id === userId) ?? users[0] ?? mockUsers[0];
   const userShelfEntries = useMemo(
     () => (userId === "yasmin" && shelfEntries.length > 0 ? shelfEntries : getMockShelfEntries(user)),
     [shelfEntries, user, userId]
@@ -92,7 +93,7 @@ export function ProfileShelfScreen({
               </View>
               <Text style={styles.privateTitle}>Estante privada</Text>
               <Text style={styles.privateText}>
-                Esta pessoa escolheu nao mostrar os livros marcados no perfil.
+                Esta pessoa escolheu não mostrar os livros marcados no perfil.
               </Text>
             </View>
           ) : (

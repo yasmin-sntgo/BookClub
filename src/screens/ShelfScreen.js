@@ -146,14 +146,14 @@ function getVisibleSections(activeFilter, shelfBooks) {
       key: "want",
       filter: "Quero ler",
       title: "Quero ler",
-      hint: "proximas escolhas",
+      hint: "próximas escolhas",
       books: shelfBooks.want
     },
     {
       key: "read",
       filter: "Lidos",
       title: "Lidos",
-      hint: "ja passaram pela sua estante",
+      hint: "já passaram pela sua estante",
       books: shelfBooks.read
     },
     { key: "favorites", type: "favorites", title: "Favoritos", books: shelfBooks.favorites },
@@ -219,9 +219,9 @@ function EmptyShelf({ onAddBook, onExplore }) {
       <View style={styles.emptyIcon}>
         <Icon name="books" color={colors.accent} size={34} />
       </View>
-      <Text style={styles.emptyTitle}>Sua estante ainda esta vazia</Text>
+      <Text style={styles.emptyTitle}>Sua estante ainda está vazia</Text>
       <Text style={styles.emptyText}>
-        Comece adicionando livros que voce quer ler, ja leu, esta lendo ou decidiu abandonar.
+        Comece adicionando livros que você quer ler, já leu, está lendo ou decidiu abandonar.
       </Text>
       <Pressable onPress={onAddBook} style={styles.emptyButton}>
         <Text style={styles.emptyButtonText}>Adicionar primeiro livro</Text>
@@ -242,7 +242,7 @@ function FavoritesSection({ books, onBookOpen }) {
     <View style={styles.section}>
       <SectionHeader
         title="Favoritos"
-        hint="os livros que voce quer destacar"
+        hint="os livros que você quer destacar"
         action={hasMore ? "Ver mais" : undefined}
         onAction={() => setExpanded(true)}
       />
@@ -298,7 +298,7 @@ function EmptyFilter({ filter }) {
   return (
     <View style={styles.emptyFilter}>
       <Text style={styles.emptyFilterTitle}>Nada em {filter.toLowerCase()}</Text>
-      <Text style={styles.emptyFilterText}>Quando voce marcar livros nessa categoria, eles aparecem aqui.</Text>
+      <Text style={styles.emptyFilterText}>Quando você marcar livros nessa categoria, eles aparecem aqui.</Text>
     </View>
   );
 }
@@ -311,11 +311,15 @@ function SectionHeader({ title, hint, action, onAction }) {
         {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
       </View>
       {action && onAction ? (
-        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8}>
+        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8} style={styles.sectionActionButton}>
           <Text style={styles.sectionAction}>{action}</Text>
+          <Icon name="next" color={colors.accent} size={15} strokeWidth={2.2} />
         </Pressable>
       ) : action ? (
-        <Text style={styles.sectionAction}>{action}</Text>
+        <View style={styles.sectionActionButton}>
+          <Text style={styles.sectionAction}>{action}</Text>
+          <Icon name="next" color={colors.accent} size={15} strokeWidth={2.2} />
+        </View>
       ) : null}
     </View>
   );
@@ -485,6 +489,12 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.bodyBold,
     fontSize: 12
+  },
+  sectionActionButton: {
+    minHeight: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3
   },
   favoritesRail: {
     paddingHorizontal: spacing.lg,

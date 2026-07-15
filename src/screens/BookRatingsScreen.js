@@ -45,7 +45,7 @@ export function BookRatingsScreen({
         reviewId: review.id,
         rating: review.rating,
         source: "resenha",
-        detail: "tambem escreveu uma resenha"
+        detail: "também escreveu uma resenha"
       }));
 
     const usedHandles = new Set([...localRatings, ...reviewRatings].map((rating) => rating.handle));
@@ -74,7 +74,7 @@ export function BookRatingsScreen({
             <Icon name="back" color={colors.textSoft} size={24} strokeWidth={2.4} />
           </Pressable>
           <View style={styles.titleBlock}>
-            <Text style={styles.title}>Avaliacoes</Text>
+            <Text style={styles.title}>Avaliações</Text>
             <Text style={styles.subtitle} numberOfLines={1}>{book.title}</Text>
           </View>
           <Pressable accessibilityRole="button" onPress={() => onRateBook?.(book.id)} style={styles.headerButton}>

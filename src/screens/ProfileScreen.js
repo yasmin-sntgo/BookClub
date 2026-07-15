@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, SafeAreaView, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 
+import { AppToast } from "../components/AppToast";
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
@@ -10,9 +11,9 @@ import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 import { fonts } from "../theme/typography";
 
-const activityTabs = ["Resenhas", "Avaliacoes", "Listas"];
-const moreOptions = ["Compartilhar perfil", "Copiar link", "Denunciar usuario", "Bloquear usuario", "Silenciar usuario"];
-const ownProfileOptions = ["Minhas interacoes", "Configuracoes", "Compartilhar perfil", "Copiar link"];
+const activityTabs = ["Resenhas", "Avaliações", "Listas"];
+const moreOptions = ["Compartilhar perfil", "Copiar link", "Denunciar usuário", "Bloquear usuário", "Silenciar usuário"];
+const ownProfileOptions = ["Minhas interações", "Configurações", "Compartilhar perfil", "Copiar link"];
 const mockBooks = getBooks();
 const mockLists = getLists();
 const mockReviews = getReviews();
@@ -123,7 +124,7 @@ export function ProfileScreen({
   async function handleProfileOption(option) {
     setMoreOpen(false);
 
-    if (option === "Minhas interacoes") {
+    if (option === "Minhas interações") {
       onInteractionsOpen?.();
       return;
     }
@@ -138,23 +139,23 @@ export function ProfileScreen({
       return;
     }
 
-    if (option === "Configuracoes") {
+    if (option === "Configurações") {
       onSettingsOpen?.();
       return;
     }
 
-    if (option === "Denunciar usuario") {
-      setNotice("Denuncia registrada para analise.");
+    if (option === "Denunciar usuário") {
+      setNotice("Denúncia registrada para análise.");
       return;
     }
 
-    if (option === "Bloquear usuario") {
-      setNotice("Usuario bloqueado.");
+    if (option === "Bloquear usuário") {
+      setNotice("Usuário bloqueado.");
       return;
     }
 
-    if (option === "Silenciar usuario") {
-      setNotice("Usuario silenciado.");
+    if (option === "Silenciar usuário") {
+      setNotice("Usuário silenciado.");
     }
   }
 
@@ -205,7 +206,7 @@ export function ProfileScreen({
               accessibilityRole="button"
               onPress={isOwnProfile ? onEditProfile : () => {
                 onToggleFollow?.(user.id);
-                setNotice(followingProfile ? "Voce deixou de seguir este perfil." : "Agora voce segue este perfil.");
+                setNotice(followingProfile ? "Você deixou de seguir este perfil." : "Agora você segue este perfil.");
               }}
               style={[styles.primaryAction, !isOwnProfile && followingProfile && styles.followingAction]}
             >
@@ -263,11 +264,7 @@ export function ProfileScreen({
           onSelect={handleProfileOption}
           onClose={() => setMoreOpen(false)}
         />
-        {notice ? (
-          <View style={styles.noticeToast}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
+        <AppToast message={notice} />
       </View>
     </SafeAreaView>
   );
@@ -286,7 +283,7 @@ function buildActivities({ user, reviews, ratings, lists, booksById }) {
 
   const localRatingActivities = ratings.map((rating) => ({
     id: `rating-${rating.id}`,
-    type: "Avaliacoes",
+    type: "Avaliações",
     label: `${user.name.split(" ")[0]} avaliou`,
     userName: user.name,
     time: rating.time,
@@ -296,7 +293,7 @@ function buildActivities({ user, reviews, ratings, lists, booksById }) {
 
   const sampleRatingActivity = user.favoriteBookIds.slice(0, 1).map((bookId) => ({
     id: `rating-sample-${bookId}`,
-    type: "Avaliacoes",
+    type: "Avaliações",
     label: `${user.name.split(" ")[0]} avaliou`,
     userName: user.name,
     time: "ontem",
@@ -359,7 +356,7 @@ function ActivityCard({ activity, onBookOpen, onListOpen, onReviewOpen }) {
     );
   }
 
-  if (activity.type === "Avaliacoes") {
+  if (activity.type === "Avaliações") {
     return (
       <Pressable accessibilityRole="button" onPress={() => onBookOpen?.(activity.book.id)} style={styles.ratingActivityCard}>
         <View style={styles.ratingStarsBadge}>

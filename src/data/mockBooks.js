@@ -18,7 +18,7 @@ export const mockBooks = [
     id: "dune",
     title: "Duna",
     author: "Frank Herbert",
-    genre: "Ficcao cientifica",
+    genre: "Ficção científica",
     year: "1965",
     pages: "680",
     publisher: "Ace Books",
@@ -26,7 +26,7 @@ export const mockBooks = [
     ratingsCount: "32 mil",
     readers: "32k",
     synopsis:
-      "Em um futuro distante, no planeta desertico Arrakis, Paul Atreides se ve no centro de uma disputa politica, religiosa e familiar pelo controle da especiaria mais valiosa do universo. Entre traicoes, profecias e uma ecologia implacavel, sua chegada a Duna transforma a historia de seu povo e revela forcas muito maiores do que uma disputa por poder.",
+      "Em um futuro distante, no planeta desértico Arrakis, Paul Atreides se vê no centro de uma disputa política, religiosa e familiar pelo controle da especiaria mais valiosa do universo. Entre traições, profecias e uma ecologia implacável, sua chegada a Duna transforma a história de seu povo e revela forças muito maiores do que uma disputa por poder.",
     coverColors: ["#5c3b1f", "#d7a660"],
     mark: "DU",
     coverUrl: "https://covers.openlibrary.org/b/isbn/9780441172719-L.jpg"
@@ -80,7 +80,7 @@ export const mockBooks = [
     id: "foundation",
     title: "Fundacao",
     author: "Isaac Asimov",
-    genre: "Ficcao cientifica",
+    genre: "Ficção científica",
     year: "1951",
     pages: "255",
     publisher: "Aleph",

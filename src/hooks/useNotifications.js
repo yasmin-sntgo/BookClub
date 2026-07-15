@@ -1,15 +1,19 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { getNotifications } from "../services";
+import { usePersistentState } from "./usePersistentState";
 
 const baseNotifications = getNotifications();
 
 export function useNotifications() {
-  const [notificationPreferences, setNotificationPreferences] = useState({
-    social: true,
-    books: true
-  });
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [notificationPreferences, setNotificationPreferences] = usePersistentState(
+    "bookclub:notificationPreferences",
+    {
+      social: true,
+      books: true
+    }
+  );
+  const [readNotificationIds, setReadNotificationIds] = usePersistentState("bookclub:readNotificationIds", []);
 
   const notifications = useMemo(
     () =>

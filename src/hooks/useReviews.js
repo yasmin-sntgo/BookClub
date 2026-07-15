@@ -1,26 +1,32 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { getComments, getReviews } from "../services";
+import { usePersistentState } from "./usePersistentState";
 
 const baseComments = getComments();
 const baseReviews = getReviews();
 
 export function useReviews({ currentUserHandle = "@yasmin_le", profileOverride = null } = {}) {
-  const [savedReviewIds, setSavedReviewIds] = useState([]);
-  const [likedReviewIds, setLikedReviewIds] = useState(
+  const [savedReviewIds, setSavedReviewIds] = usePersistentState("bookclub:savedReviewIds", []);
+  const [likedReviewIds, setLikedReviewIds] = usePersistentState(
+    "bookclub:likedReviewIds",
     baseReviews.filter((review) => review.liked).map((review) => review.id)
   );
-  const [likedCommentIds, setLikedCommentIds] = useState(
+  const [likedCommentIds, setLikedCommentIds] = usePersistentState(
+    "bookclub:likedCommentIds",
     baseComments.filter((comment) => comment.liked).map((comment) => comment.id)
   );
-  const [createdReviews, setCreatedReviews] = useState([]);
-  const [createdRatings, setCreatedRatings] = useState([]);
-  const [createdComments, setCreatedComments] = useState([]);
-  const [editedReviewTexts, setEditedReviewTexts] = useState({});
-  const [editedCommentTexts, setEditedCommentTexts] = useState({});
-  const [deletedReviewIds, setDeletedReviewIds] = useState([]);
-  const [deletedCommentIds, setDeletedCommentIds] = useState([]);
-  const [revealedSpoilerReviewIds, setRevealedSpoilerReviewIds] = useState([]);
+  const [createdReviews, setCreatedReviews] = usePersistentState("bookclub:createdReviews", []);
+  const [createdRatings, setCreatedRatings] = usePersistentState("bookclub:createdRatings", []);
+  const [createdComments, setCreatedComments] = usePersistentState("bookclub:createdComments", []);
+  const [editedReviewTexts, setEditedReviewTexts] = usePersistentState("bookclub:editedReviewTexts", {});
+  const [editedCommentTexts, setEditedCommentTexts] = usePersistentState("bookclub:editedCommentTexts", {});
+  const [deletedReviewIds, setDeletedReviewIds] = usePersistentState("bookclub:deletedReviewIds", []);
+  const [deletedCommentIds, setDeletedCommentIds] = usePersistentState("bookclub:deletedCommentIds", []);
+  const [revealedSpoilerReviewIds, setRevealedSpoilerReviewIds] = usePersistentState(
+    "bookclub:revealedSpoilerReviewIds",
+    []
+  );
 
   const allReviews = useMemo(
     () =>

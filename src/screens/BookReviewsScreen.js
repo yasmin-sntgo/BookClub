@@ -21,6 +21,7 @@ export function BookReviewsScreen({
   likedReviewIds = [],
   revealedSpoilerReviewIds = [],
   reviews = mockReviews,
+  users = mockUsers,
   onBack,
   onCreate,
   onCreateReview,
@@ -64,12 +65,13 @@ export function BookReviewsScreen({
                   onReviewOpen={onReviewOpen}
                   onSpoilerReveal={() => onSpoilerReveal?.(review.id)}
                   onUserOpen={onUserOpen}
+                  users={users}
                 />
               ))}
             </View>
           ) : (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Ainda nao tem resenhas</Text>
+              <Text style={styles.emptyTitle}>Ainda não tem resenhas</Text>
               <Text style={styles.emptyText}>Seja a primeira pessoa a puxar conversa sobre este livro.</Text>
             </View>
           )}
@@ -81,8 +83,8 @@ export function BookReviewsScreen({
   );
 }
 
-function ReviewRow({ review, commentCount, liked, spoilerRevealed, onReviewOpen, onSpoilerReveal, onUserOpen }) {
-  const userId = mockUsers.find((user) => user.handle === review.handle)?.id ?? "lia";
+function ReviewRow({ review, commentCount, liked, spoilerRevealed, onReviewOpen, onSpoilerReveal, onUserOpen, users = mockUsers }) {
+  const userId = users.find((user) => user.handle === review.handle)?.id ?? "lia";
   const likeCount = getReviewLikeCount(review, liked);
 
   return (

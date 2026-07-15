@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { usePersistentState } from "./usePersistentState";
 
 const initialShelfEntries = [
   { bookId: "dune", status: "reading", favorite: true },
@@ -16,8 +16,8 @@ const statusByLabel = {
 };
 
 export function useShelf() {
-  const [shelfEntries, setShelfEntries] = useState(initialShelfEntries);
-  const [shelfPrivate, setShelfPrivate] = useState(false);
+  const [shelfEntries, setShelfEntries] = usePersistentState("bookclub:shelfEntries", initialShelfEntries);
+  const [shelfPrivate, setShelfPrivate] = usePersistentState("bookclub:shelfPrivate", false);
 
   function saveShelfEntry(nextEntry) {
     setShelfEntries((current) => {

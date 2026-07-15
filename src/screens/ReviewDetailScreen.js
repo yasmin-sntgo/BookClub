@@ -15,6 +15,7 @@ import {
   View
 } from "react-native";
 
+import { AppToast } from "../components/AppToast";
 import { BookCover } from "../components/BookCover";
 import { BottomNav } from "../components/BottomNav";
 import { Icon } from "../components/Icon";
@@ -39,6 +40,7 @@ export function ReviewDetailScreen({
   likedReviewIds = [],
   saved = false,
   reviews = mockReviews,
+  users = mockUsers,
   onBack,
   onBookOpen,
   onCommentCreate,
@@ -94,7 +96,7 @@ export function ReviewDetailScreen({
     onCommentCreate?.({ reviewId: review.id, text, replyingTo });
     setCommentText("");
     setReplyingTo(null);
-    setNotice("Comentario publicado.");
+    setNotice("Comentário publicado.");
     commentInputRef.current?.blur();
     Keyboard.dismiss();
   }
@@ -172,7 +174,7 @@ export function ReviewDetailScreen({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.reviewCard}>
-            <AuthorLine review={review} onUserOpen={onUserOpen} />
+            <AuthorLine review={review} onUserOpen={onUserOpen} users={users} />
 
             <Pressable onPress={() => onBookOpen?.(book.id)} style={styles.bookBlock}>
               <BookCover book={book} size="small" />
@@ -239,7 +241,7 @@ export function ReviewDetailScreen({
           </View>
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Comentarios</Text>
+            <Text style={styles.sectionTitle}>Comentários</Text>
           </View>
 
           <View style={styles.comments}>
@@ -260,6 +262,7 @@ export function ReviewDetailScreen({
                   onMenu={() => setSelectedComment(comment)}
                   onReply={() => startReply(comment.user)}
                   onUserOpen={onUserOpen}
+                  users={users}
                 />
               );
             })}
@@ -278,7 +281,7 @@ export function ReviewDetailScreen({
         {keyboardVisible ? null : <BottomNav activeTab="home" onChange={onNavigate} onCreate={onCreate} />}
         <ActionSheet
           visible={menuVisible}
-          title="Opcoes da resenha"
+          title="Opções da resenha"
           options={[
             ...(isOwnReview ? ["Editar resenha", "Apagar resenha"] : []),
             saved ? "Remover dos salvos" : "Salvar resenha",
@@ -315,26 +318,26 @@ export function ReviewDetailScreen({
         />
         <ActionSheet
           visible={Boolean(selectedComment)}
-          title="Opcoes do comentario"
+          title="Opções do comentário"
           options={
             selectedComment?.handle === currentUserHandle
             || selectedComment?.local
-              ? ["Editar comentario", "Apagar comentario", "Denunciar comentario"]
-              : ["Denunciar comentario"]
+              ? ["Editar comentário", "Apagar comentário", "Denunciar comentário"]
+              : ["Denunciar comentário"]
           }
           onClose={() => setSelectedComment(null)}
           onSelect={(option) => {
             const commentId = selectedComment?.id;
 
             setSelectedComment(null);
-            if (option === "Editar comentario" && commentId) {
+            if (option === "Editar comentário" && commentId) {
               setEditTarget({ type: "comment", id: commentId, text: selectedComment?.text ?? "" });
               return;
             }
 
-            if (option === "Apagar comentario" && commentId) {
+            if (option === "Apagar comentário" && commentId) {
               onCommentDelete?.(commentId);
-              setNotice("Comentario apagado.");
+              setNotice("Comentário apagado.");
               return;
             }
 
@@ -343,16 +346,16 @@ export function ReviewDetailScreen({
         />
         <TextFeedbackSheet
           visible={Boolean(editTarget)}
-          title={editTarget?.type === "comment" ? "Editar comentario" : "Editar resenha"}
-          description={editTarget?.type === "comment" ? "Ajuste o texto do seu comentario." : "Ajuste o texto da sua resenha."}
+          title={editTarget?.type === "comment" ? "Editar comentário" : "Editar resenha"}
+          description={editTarget?.type === "comment" ? "Ajuste o texto do seu comentário." : "Ajuste o texto da sua resenha."}
           initialText={editTarget?.text ?? ""}
-          placeholder={editTarget?.type === "comment" ? "Escreva o comentario..." : "Escreva a resenha..."}
+          placeholder={editTarget?.type === "comment" ? "Escreva o comentário..." : "Escreva a resenha..."}
           submitLabel="Salvar"
           onClose={() => setEditTarget(null)}
           onSubmit={(text) => {
             if (editTarget?.type === "comment") {
               onCommentEdit?.(editTarget.id, text);
-              setNotice("Comentario editado.");
+              setNotice("Comentário editado.");
             } else if (editTarget?.type === "review") {
               onReviewEdit?.(editTarget.id, text);
               setNotice("Resenha editada.");
@@ -362,28 +365,24 @@ export function ReviewDetailScreen({
         />
         <TextFeedbackSheet
           visible={Boolean(reportTarget)}
-          title={reportTarget?.type === "comment" ? "Denunciar comentario" : "Denunciar resenha"}
-          description="Explique o motivo da denuncia para analise."
+          title={reportTarget?.type === "comment" ? "Denunciar comentário" : "Denunciar resenha"}
+          description="Explique o motivo da denúncia para análise."
           placeholder="Descreva o problema..."
           submitLabel="Registrar"
           onClose={() => setReportTarget(null)}
           onSubmit={() => {
             setReportTarget(null);
-            setNotice("Denuncia registrada.");
+            setNotice("Denúncia registrada.");
           }}
         />
-        {notice ? (
-          <View style={styles.noticeToast}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
+        <AppToast message={notice} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function AuthorLine({ review, onUserOpen }) {
-  const userId = findUserId(review.handle);
+function AuthorLine({ review, onUserOpen, users = mockUsers }) {
+  const userId = findUserId(review.handle, users);
 
   return (
     <Pressable onPress={() => onUserOpen?.(userId)} style={styles.authorLine}>
@@ -398,8 +397,8 @@ function AuthorLine({ review, onUserOpen }) {
   );
 }
 
-function CommentCard({ comment, liked, likes, onLike, onMenu, onReply, onUserOpen }) {
-  const userId = findUserId(comment.handle);
+function CommentCard({ comment, liked, likes, onLike, onMenu, onReply, onUserOpen, users = mockUsers }) {
+  const userId = findUserId(comment.handle, users);
   const likeScale = useRef(new Animated.Value(1)).current;
 
   function handleLike(event) {
@@ -467,8 +466,8 @@ function CommentCard({ comment, liked, likes, onLike, onMenu, onReply, onUserOpe
   );
 }
 
-function findUserId(handle) {
-  return mockUsers.find((user) => user.handle === handle)?.id ?? "lia";
+function findUserId(handle, users = mockUsers) {
+  return users.find((user) => user.handle === handle)?.id ?? "lia";
 }
 
 function ActionIcon({ icon, count, active = false, activeColor = colors.accent, onPress }) {
@@ -541,7 +540,7 @@ function CommentComposer({ inputRef, keyboardVisible, replyingTo, text, onCancel
         <TextInput
           ref={inputRef}
           multiline
-          placeholder={replyingTo ? "Escreva uma resposta..." : "Escreva um comentario..."}
+          placeholder={replyingTo ? "Escreva uma resposta..." : "Escreva um comentário..."}
           placeholderTextColor={colors.textMuted}
           value={text}
           onChangeText={onChangeText}
